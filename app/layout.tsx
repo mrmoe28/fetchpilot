@@ -29,10 +29,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className="text-fetchpilot-text">
+      <body className="text-foreground antialiased">
         <ToastProvider>
           <Header />
-          <main className="max-w-6xl mx-auto p-6">{children}</main>
+          <main className="max-w-7xl mx-auto px-6 py-12">{children}</main>
         </ToastProvider>
       </body>
     </html>

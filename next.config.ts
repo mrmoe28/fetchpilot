@@ -8,16 +8,6 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: false,
   },
   typedRoutes: false,
-  experimental: {
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
-      },
-    },
-  },
   images: {
     remotePatterns: [
       {
