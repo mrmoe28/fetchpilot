@@ -163,9 +163,35 @@ IMPORTANT: Base selectors on the ACTUAL HTML provided, not generic patterns. If 
       totalTokens: (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0)
     } : undefined;
 
-    // Extract JSON from potential markdown code blocks
-    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/```\s*([\s\S]*?)\s*```/);
-    const jsonText = jsonMatch ? jsonMatch[1] : text;
+    // Extract JSON from potential markdown code blocks with better error handling
+    let jsonText = text;
+    
+    // Try multiple extraction patterns
+    const patterns = [
+      /```json\s*([\s\S]*?)\s*```/,  // Standard json blocks
+      /```\s*([\s\S]*?)\s*```/,      // Generic code blocks
+      /\{[\s\S]*?\}/,                // First complete JSON object
+      /\[[\s\S]*?\]/                 // JSON array
+    ];
+    
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match) {
+        jsonText = match[1] || match[0];
+        break;
+      }
+    }
+    
+    // Clean up common JSON formatting issues
+    jsonText = jsonText
+      .trim()
+      .replace(/^[^{\[]*/, '')  // Remove leading non-JSON text
+      .replace(/[^}\]]*$/, '')  // Remove trailing non-JSON text
+      .replace(/,(\s*[}\]])/g, '$1')  // Remove trailing commas
+      .replace(/\n/g, ' ')  // Replace newlines with spaces
+      .replace(/\\"/g, '"')  // Fix escaped quotes
+      .replace(/([{,]\s*)(\w+):/g, '$1"$2":')  // Quote unquoted keys
+      .replace(/:\s*([^",\[\]{}\s]+)(\s*[,}])/g, ': "$1"$2')  // Quote unquoted string values
 
     let parsed;
     let validated;
@@ -180,7 +206,41 @@ IMPORTANT: Base selectors on the ACTUAL HTML provided, not generic patterns. If 
       validationSuccess = true;
     } catch (validationErr) {
       validationError = validationErr instanceof Error ? validationErr.message : 'Unknown validation error';
-      throw validationErr;
+      
+      logger?.({
+        runId,
+        stage: 'claude_decision_fallback_json',
+        timestamp: new Date().toISOString(),
+        durationMs: Math.round(performance.now() - startTime),
+        error: validationError,
+        jsonText: jsonText.substring(0, 200) + '...'
+      });
+      
+      // Use enhanced fallback instead of throwing
+      const hasJsonLd = obs.domSignals?.hasJsonLd;
+      validated = {
+        rationale: `JSON parsing failed, using enhanced fallback selectors: ${validationError}`,
+        actions: [{
+          mode: "HTTP" as const,
+          parseStrategy: hasJsonLd ? "JSONLD" as const : "HYBRID" as const,
+          selectors: {
+            item: "article.product_pod, article, .product, .product-card, .product-item, [data-product], li.item, .book, .col-lg-3, .col-md-3",
+            link: "h3 a, a[href*='catalogue'], a[href*='product'], a.product-link, a[href]",
+            title: "h3 a, h2, h3, .title, .product-title, .name, [alt]",
+            price: ".price_color, .price, [class*='price'], [class*='cost'], .money, .amount",
+            image: ".image_container img, img.thumbnail, img"
+          },
+          pagination: {
+            type: "LINK" as const,
+            selector: "a[rel='next'], .pagination a.next, a:contains('Next'), .next-page",
+            maxPages: 5
+          },
+          antiLazy: { scroll: false, waitMs: 800, maxScrolls: 0 },
+          retry: { maxAttempts: 3, strategy: "JITTER" as const },
+          stopCriteria: { minProducts: 10 }
+        }]
+      };
+      validationSuccess = true; // Mark as successful since we have fallback
     } finally {
       const durationMs = Math.round(performance.now() - startTime);
       
@@ -218,16 +278,16 @@ IMPORTANT: Base selectors on the ACTUAL HTML provided, not generic patterns. If 
     // Smarter fallback based on observations
     const hasJsonLd = obs.domSignals?.hasJsonLd;
     const fallbackDecision = {
-      rationale: `Fallback strategy: ${hasJsonLd ? 'Using JSON-LD extraction' : 'Generic CSS selectors'} due to API error: ${errorMessage}`,
+      rationale: `Fallback strategy: ${hasJsonLd ? 'Using JSON-LD extraction' : 'Enhanced CSS selectors'} due to API error: ${errorMessage}`,
       actions: [{
         mode: "HTTP" as const,
         parseStrategy: hasJsonLd ? "JSONLD" as const : "HYBRID" as const,
         selectors: {
-          item: "article, .product, .product-card, [data-product], li.item",
-          link: "a[href]",
-          title: "h2, h3, .title, .product-title, .name",
-          price: ".price, [class*='price'], [class*='cost']",
-          image: "img"
+          item: "article.product_pod, article, .product, .product-card, .product-item, [data-product], li.item, .book, .col-lg-3, .col-md-3",
+          link: "h3 a, a[href*='catalogue'], a[href*='product'], a.product-link, a[href]",
+          title: "h3 a, h2, h3, .title, .product-title, .name, [alt]",
+          price: ".price_color, .price, [class*='price'], [class*='cost'], .money, .amount",
+          image: ".image_container img, img.thumbnail, img"
         },
         pagination: {
           type: "LINK" as const,

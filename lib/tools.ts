@@ -65,7 +65,7 @@ export function extractProductsHTML(html: string, baseUrl: string, sel: { item?:
       const title = sel.title ? $(el).find(sel.title).text().trim() : "";
       const price = sel.price ? $(el).find(sel.price).text().trim() : undefined;
       const image = sel.image ? ($(el).find(sel.image).attr("src") || $(el).find(sel.image).attr("data-src") || $(el).find(sel.image).attr("srcset")?.split(" ").shift()) : undefined;
-      if (url && title) out.push({ url: toAbs(url), title, price, image });
+      if (url && title) out.push({ url: toAbs(url), title, price, image: image ? toAbs(image) : undefined });
     });
   }
   return out;

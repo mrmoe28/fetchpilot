@@ -36,6 +36,13 @@ interface ScrapingRun {
   goal: string
   minProducts?: number
   maxPages?: number
+  customSelectors?: {
+    item?: string
+    link?: string
+    title?: string
+    price?: string
+    image?: string
+  }
 }
 
 interface Config {
@@ -105,13 +112,17 @@ async function main() {
     const perfStart = performance.now()
 
     try {
-      const products = await scrapeProducts(run.url, run.goal, {
+      // Enhanced config with custom selectors if provided
+      const scrapeConfig = {
         anthropicKey,
         maxTotalPages: run.maxPages || 10,
         runId,
         logger,
-        logs
-      })
+        logs,
+        customSelectors: run.customSelectors
+      };
+
+      const products = await scrapeProducts(run.url, run.goal, scrapeConfig)
 
       const durationMs = Math.round(performance.now() - perfStart)
       const summary = events.find(e => e.stage === 'scrape_complete' || e.stage === 'scrape_complete_early')

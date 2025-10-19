@@ -9,6 +9,13 @@ type Cfg = {
   logs?: string[];
   runId?: string;
   logger?: (event: any) => void;
+  customSelectors?: {
+    item?: string;
+    link?: string;
+    title?: string;
+    price?: string;
+    image?: string;
+  };
 };
 
 export async function scrapeProducts(startUrl: string, goal: string, cfg: Cfg) {
@@ -90,6 +97,40 @@ export async function scrapeProducts(startUrl: string, goal: string, cfg: Cfg) {
     } catch (error) {
       failureCounters.claudeErrors++;
       logs.push(`Claude decision failed: ${error}`);
+      
+      // Use custom selectors immediately if Claude fails
+      if (cfg.customSelectors) {
+        logs.push("→ Claude failed, using custom selectors as fallback");
+        try {
+          const customProducts = extractProductsHTML(observation.html || '', observation.url, cfg.customSelectors);
+          const validProducts = customProducts.map(p => {
+            try {
+              return Product.parse(p);
+            } catch (err) {
+              return null;
+            }
+          }).filter(p => p !== null) as TProduct[];
+          
+          if (validProducts.length > 0) {
+            const newProducts = results.length;
+            merge(results, validProducts);
+            logs.push(`✅ Custom selectors found ${results.length - newProducts} products`);
+            
+            cfg.logger?.({
+              runId: cfg.runId,
+              stage: 'extraction_results',
+              timestamp: new Date().toISOString(),
+              url: observation.url,
+              newProducts: results.length - newProducts,
+              totalProducts: results.length,
+              parseStrategy: 'custom_selectors',
+              hasSelectors: true
+            });
+          }
+        } catch (customError) {
+          logs.push(`Custom selectors also failed: ${customError}`);
+        }
+      }
       continue;
     }
     logs.push(`Decision: ${short(decision.rationale)}; actions=${decision.actions.length}`);
@@ -116,15 +157,32 @@ export async function scrapeProducts(startUrl: string, goal: string, cfg: Cfg) {
       let products: TProduct[] = [];
 
       try {
-        // Phase 1: Try fast extraction methods first
-        if (action.parseStrategy === "JSONLD" || action.parseStrategy === "HYBRID") {
+        // Phase 1: Try custom selectors first if provided
+        if (cfg.customSelectors) {
+          logs.push("→ Using custom selectors");
+          const customProducts = extractProductsHTML(res.html, res.url, cfg.customSelectors);
+          logs.push(`→ Custom selectors extracted ${customProducts.length} raw products`);
+          
+          for (const p of customProducts) {
+            try {
+              const validated = Product.parse(p);
+              products.push(validated);
+            } catch (err) {
+              logs.push(`⚠️ Invalid product from custom selectors: ${p.title} - ${err}`);
+            }
+          }
+          logs.push(`→ Custom selectors validated ${products.length} products`);
+        }
+        
+        // Phase 2: Try fast extraction methods
+        if (products.length === 0 && (action.parseStrategy === "JSONLD" || action.parseStrategy === "HYBRID")) {
           products = products.concat(parseJsonLd(res.html));
         }
-        if ((action.parseStrategy === "CSS" || action.parseStrategy === "HYBRID") && action.selectors) {
+        if (products.length === 0 && (action.parseStrategy === "CSS" || action.parseStrategy === "HYBRID") && action.selectors) {
           products = products.concat(extractProductsHTML(res.html, res.url, action.selectors).map(p => Product.parse(p)));
         }
 
-        // Phase 2: If no products found, use direct Claude extraction (2025 upgrade)
+        // Phase 3: If no products found, use direct Claude extraction (2025 upgrade)
         if (products.length === 0 && cfg.anthropicKey) {
           logs.push("→ No products from selectors, trying direct Claude extraction...");
           const { extractWithClaude } = await import("./direct-extraction");

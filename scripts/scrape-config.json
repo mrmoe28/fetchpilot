@@ -4,7 +4,14 @@
       "url": "https://books.toscrape.com/",
       "goal": "Extract book listings with titles and prices",
       "minProducts": 5,
-      "maxPages": 2
+      "maxPages": 2,
+      "customSelectors": {
+        "item": "article.product_pod",
+        "link": "h3 a",
+        "title": "h3 a",
+        "price": ".price_color",
+        "image": ".image_container img"
+      }
     },
     {
       "url": "https://quotes.toscrape.com/",

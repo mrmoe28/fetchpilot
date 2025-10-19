@@ -72,12 +72,32 @@ Return ONLY the JSON array, nothing else.`;
     const data = await res.json();
     const text = data?.content?.[0]?.text ?? "";
 
-    // Extract JSON from response (handle markdown code blocks)
-    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) ||
-                      text.match(/```\s*([\s\S]*?)\s*```/) ||
-                      text.match(/\[[\s\S]*\]/);
-
-    const jsonText = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text;
+    // Extract JSON from response with improved error handling
+    let jsonText = text.trim();
+    
+    // Multiple extraction strategies
+    const patterns = [
+      /```json\s*([\s\S]*?)\s*```/,  // Standard json blocks
+      /```\s*([\s\S]*?)\s*```/,      // Generic code blocks  
+      /\[[\s\S]*?\]/,                // JSON array (most common for products)
+      /\{[\s\S]*?\}/                 // JSON object
+    ];
+    
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match) {
+        jsonText = match[1] || match[0];
+        break;
+      }
+    }
+    
+    // Clean up JSON formatting issues
+    jsonText = jsonText
+      .trim()
+      .replace(/^[^{\[]*/, '')       // Remove leading non-JSON text
+      .replace(/[^}\]]*$/, '')       // Remove trailing non-JSON text  
+      .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
+      .replace(/\n/g, ' ')           // Replace newlines with spaces
 
     const products = JSON.parse(jsonText);
 
