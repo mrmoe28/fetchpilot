@@ -9,6 +9,7 @@ import LogView from '@/components/log-view'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import ExportButtons from '@/components/export-buttons'
 
 export const metadata: Metadata = {
   title: 'Job Details',
@@ -31,14 +32,15 @@ async function getJobWithProducts(jobId: string, userId: string) {
   return { job, products }
 }
 
-export default async function JobDetailsPage({ params }: { params: { id: string } }) {
+export default async function JobDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const session = await auth()
 
   if (!session?.user?.id) {
     redirect('/auth/signin')
   }
 
-  const data = await getJobWithProducts(params.id, session.user.id)
+  const data = await getJobWithProducts(id, session.user.id)
 
   if (!data) {
     notFound()
@@ -48,17 +50,20 @@ export default async function JobDetailsPage({ params }: { params: { id: string 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link
-          href="/dashboard"
-          className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-fetchpilot-text">Job Details</h1>
-          <p className="text-sm text-slate-600">{job.id}</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link
+            href="/dashboard"
+            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-fetchpilot-text">Job Details</h1>
+            <p className="text-sm text-slate-600">{job.id}</p>
+          </div>
         </div>
+        {products.length > 0 && <ExportButtons jobId={id} />}
       </div>
 
       <Card className="shadow-soft border-0 rounded-2xl">

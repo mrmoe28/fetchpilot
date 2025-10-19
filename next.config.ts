@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: false,
   },
-  typedRoutes: true,
+  typedRoutes: false,
   experimental: {
     turbo: {
       rules: {

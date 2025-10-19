@@ -1,7 +1,8 @@
-import "./globals.css";
-import type { Metadata } from "next";
-import { ReactNode } from "react";
-import Header from "@/components/header";
+import "./globals.css"
+import type { Metadata } from "next"
+import { ReactNode } from "react"
+import Header from "@/components/header"
+import { ToastProvider } from "@/lib/providers/toast-provider"
 
 export const metadata: Metadata = {
   title: {
@@ -29,8 +30,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className="text-fetchpilot-text">
-        <Header />
-        <main className="max-w-6xl mx-auto p-6">{children}</main>
+        <ToastProvider>
+          <Header />
+          <main className="max-w-6xl mx-auto p-6">{children}</main>
+        </ToastProvider>
       </body>
     </html>
   );

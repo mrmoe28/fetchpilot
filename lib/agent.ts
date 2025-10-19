@@ -92,11 +92,12 @@ function parseJsonLd(html: string): TProduct[] {
 }
 
 function findNextLinks(html: string, base: string, selector?: string): string[] {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const cheerio = require("cheerio");
   const $ = cheerio.load(html);
   const cand = selector
-    ? $(selector).map((_, a) => $(a).attr("href") || "").get()
-    : $("a[rel='next'], .pagination a.next, a:contains('Next')").map((_, a) => $(a).attr("href") || "").get();
+    ? $(selector).map((_: number, a: any) => $(a).attr("href") || "").get()
+    : $("a[rel='next'], .pagination a.next, a:contains('Next')").map((_: number, a: any) => $(a).attr("href") || "").get();
   const out: string[] = [];
   for (const href of cand) {
     try { out.push(new URL(href, base).toString()); } catch {}

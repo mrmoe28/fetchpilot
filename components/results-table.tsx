@@ -1,4 +1,6 @@
-import { Table, THead, TRow, TH, TD } from "@/components/ui/table";
+import { Table, THead, TRow, TH, TD } from "@/components/ui/table"
+import Image from "next/image"
+
 export default function ResultsTable({ rows }: { rows: any[] }) {
   return (
     <div className="overflow-auto">
@@ -12,9 +14,20 @@ export default function ResultsTable({ rows }: { rows: any[] }) {
           {rows.map((r, i) => (
             <TRow key={i}>
               <TD>{r.title}</TD>
-              <TD><a className="text-fetchpilot.primary underline" href={r.url} target="_blank">{r.url}</a></TD>
+              <TD><a className="text-fetchpilot.primary underline" href={r.url} target="_blank" rel="noopener noreferrer">{r.url}</a></TD>
               <TD>{r.price ?? "-"}</TD>
-              <TD>{r.image ? <img src={r.image} alt={r.title} className="h-10 rounded-md" /> : "-"}</TD>
+              <TD>
+                {r.image ? (
+                  <Image
+                    src={r.image}
+                    alt={r.title || 'Product image'}
+                    width={40}
+                    height={40}
+                    className="rounded-md object-cover"
+                    unoptimized
+                  />
+                ) : "-"}
+              </TD>
               <TD>{r.inStock === true ? "Yes" : r.inStock === false ? "No" : "-"}</TD>
             </TRow>
           ))}
