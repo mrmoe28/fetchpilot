@@ -9,7 +9,18 @@ export interface FetchResult {
 
 export const HttpFetcher = {
   fetch: async (url: string): Promise<FetchResult> => {
-    const res = await fetch(url, { redirect: "follow", headers: { "User-Agent": UA() } });
+    const res = await fetch(url, { 
+      redirect: "follow", 
+      headers: { 
+        "User-Agent": UA(),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Referer": (() => { try { return new URL(url).origin; } catch { return url; } })(),
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1"
+      }
+    });
     const html = await res.text();
     const $ = cheerio.load(html);
     const hasJsonLd = $('script[type="application/ld+json"]').length > 0;
@@ -60,4 +71,11 @@ export function extractProductsHTML(html: string, baseUrl: string, sel: { item?:
   return out;
 }
 
-function UA() { return "Mozilla/5.0 (compatible; FetchPilot/1.0; +https://example.com/bot)"; }
+function UA() { 
+  const userAgents = [
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15"
+  ];
+  return userAgents[Math.floor(Math.random() * userAgents.length)];
+}
