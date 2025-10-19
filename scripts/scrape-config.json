@@ -1,0 +1,17 @@
+{
+  "runs": [
+    {
+      "url": "https://books.toscrape.com/",
+      "goal": "Extract book listings with titles and prices",
+      "minProducts": 5,
+      "maxPages": 2
+    },
+    {
+      "url": "https://quotes.toscrape.com/",
+      "goal": "Extract quotes with authors", 
+      "minProducts": 3,
+      "maxPages": 1
+    }
+  ],
+  "userId": "test-batch-user"
+}
