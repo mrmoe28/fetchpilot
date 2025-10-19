@@ -106,7 +106,7 @@ export async function scrapeProducts(startUrl: string, goal: string, cfg: Cfg) {
           const validProducts = customProducts.map(p => {
             try {
               return Product.parse(p);
-            } catch (err) {
+            } catch {
               return null;
             }
           }).filter(p => p !== null) as TProduct[];
