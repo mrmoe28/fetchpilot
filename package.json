@@ -12,7 +12,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "verify:scrape": "tsx scripts/run-scrape.ts"
+    "verify:scrape": "export $(grep -v '^#' .env.local | xargs) && tsx scripts/run-scrape.ts"
   },
   "dependencies": {
     "next": "^15.5.3",
