@@ -38,11 +38,24 @@ export async function scrapeProducts(startUrl: string, goal: string, cfg: Cfg) {
       if (!res.html) { logs.push("No HTML returned"); continue; }
 
       let products: TProduct[] = [];
+
+      // Phase 1: Try fast extraction methods first
       if (action.parseStrategy === "JSONLD" || action.parseStrategy === "HYBRID") {
         products = products.concat(parseJsonLd(res.html));
       }
       if ((action.parseStrategy === "CSS" || action.parseStrategy === "HYBRID") && action.selectors) {
         products = products.concat(extractProductsHTML(res.html, res.url, action.selectors).map(p => Product.parse(p)));
+      }
+
+      // Phase 2: If no products found, use direct Claude extraction (2025 upgrade)
+      if (products.length === 0 && cfg.anthropicKey) {
+        logs.push("→ No products from selectors, trying direct Claude extraction...");
+        const { extractWithClaude } = await import("./direct-extraction");
+        const claudeProducts = await extractWithClaude(res.html, res.url, goal, cfg.anthropicKey);
+        products = products.concat(claudeProducts);
+        if (claudeProducts.length > 0) {
+          logs.push(`✓ Claude extracted ${claudeProducts.length} products directly`);
+        }
       }
 
       const before = results.length;
