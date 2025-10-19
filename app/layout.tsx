@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { ReactNode } from "react"
 import Header from "@/components/header"
 import { ToastProvider } from "@/lib/providers/toast-provider"
+import { SessionProvider } from "@/components/session-provider"
 
 export const metadata: Metadata = {
   title: {
@@ -30,10 +31,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className="text-foreground antialiased">
-        <ToastProvider>
-          <Header />
-          <main className="max-w-7xl mx-auto px-6 py-12">{children}</main>
-        </ToastProvider>
+        <SessionProvider>
+          <ToastProvider>
+            <Header />
+            <main className="max-w-7xl mx-auto px-6 py-12">{children}</main>
+          </ToastProvider>
+        </SessionProvider>
       </body>
     </html>
   );

@@ -56,9 +56,36 @@ function extractSampleProducts(html: string): string {
   return samples;
 }
 
-export async function askClaudeForDecision(obs: typeof PageObservation._type, goal: string, anthropicKey: string): Promise<TAgentDecision> {
+interface ClaudeConfig {
+  anthropicKey: string;
+  runId?: string;
+  logger?: (event: any) => void;
+}
+
+export async function askClaudeForDecision(obs: typeof PageObservation._type, goal: string, cfg: ClaudeConfig): Promise<TAgentDecision> {
+  const startTime = performance.now();
+  const { anthropicKey, runId, logger } = cfg;
+  
+  logger?.({
+    runId,
+    stage: 'claude_decision_start',
+    timestamp: new Date().toISOString(),
+    url: obs.url,
+    goal: goal.substring(0, 100),
+    hasHtml: !!obs.html,
+    hasJsonLd: obs.domSignals?.hasJsonLd || false
+  });
+
   if (!obs.html) {
-    throw new Error("No HTML content to analyze");
+    const error = "No HTML content to analyze";
+    logger?.({
+      runId,
+      stage: 'claude_decision_error',
+      timestamp: new Date().toISOString(),
+      error,
+      durationMs: Math.round(performance.now() - startTime)
+    });
+    throw new Error(error);
   }
 
   // Preprocess HTML for better Claude performance
@@ -149,28 +176,73 @@ IMPORTANT: Base selectors on the ACTUAL HTML provided, not generic patterns. If 
 
     const data = await res.json();
     const text = data?.content?.[0]?.text ?? "";
+    
+    // Capture token usage if available
+    const tokenUsage = data?.usage ? {
+      inputTokens: data.usage.input_tokens,
+      outputTokens: data.usage.output_tokens,
+      totalTokens: (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0)
+    } : undefined;
 
     // Extract JSON from potential markdown code blocks
     const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/```\s*([\s\S]*?)\s*```/);
     const jsonText = jsonMatch ? jsonMatch[1] : text;
 
-    const parsed = JSON.parse(jsonText);
+    let parsed;
+    let validated;
+    let validationSuccess = false;
+    let validationError: string | undefined;
 
-    // Validate with Zod schema
-    const validated = AgentDecision.parse(parsed);
+    try {
+      parsed = JSON.parse(jsonText);
+      
+      // Validate with Zod schema
+      validated = AgentDecision.parse(parsed);
+      validationSuccess = true;
+    } catch (validationErr) {
+      validationError = validationErr instanceof Error ? validationErr.message : 'Unknown validation error';
+      throw validationErr;
+    } finally {
+      const durationMs = Math.round(performance.now() - startTime);
+      
+      logger?.({
+        runId,
+        stage: 'claude_decision_complete',
+        timestamp: new Date().toISOString(),
+        durationMs,
+        tokenUsage,
+        validationSuccess,
+        validationError,
+        responseLength: text.length,
+        actionsCount: validationSuccess ? validated?.actions?.length : 0
+      });
+    }
+
     return validated;
 
   } catch (error: any) {
+    const durationMs = Math.round(performance.now() - startTime);
+    const errorMessage = error.message || 'Unknown error';
+    
+    logger?.({
+      runId,
+      stage: 'claude_decision_error',
+      timestamp: new Date().toISOString(),
+      durationMs,
+      error: errorMessage,
+      errorType: error.constructor.name,
+      fallbackUsed: true
+    });
+    
     console.error("Claude API error:", error);
 
     // Smarter fallback based on observations
     const hasJsonLd = obs.domSignals?.hasJsonLd;
-
-    return {
-      rationale: `Fallback strategy: ${hasJsonLd ? 'Using JSON-LD extraction' : 'Generic CSS selectors'} due to API error: ${error.message}`,
+    const fallbackDecision = {
+      rationale: `Fallback strategy: ${hasJsonLd ? 'Using JSON-LD extraction' : 'Generic CSS selectors'} due to API error: ${errorMessage}`,
       actions: [{
-        mode: "HTTP",
-        parseStrategy: hasJsonLd ? "JSONLD" : "HYBRID",
+        mode: "HTTP" as const,
+        parseStrategy: hasJsonLd ? "JSONLD" as const : "HYBRID" as const,
         selectors: {
           item: "article, .product, .product-card, [data-product], li.item",
           link: "a[href]",
@@ -179,14 +251,25 @@ IMPORTANT: Base selectors on the ACTUAL HTML provided, not generic patterns. If 
           image: "img"
         },
         pagination: {
-          type: "LINK",
+          type: "LINK" as const,
           selector: "a[rel='next'], .pagination a.next, a:contains('Next'), .next-page",
           maxPages: 5
         },
         antiLazy: { scroll: false, waitMs: 800, maxScrolls: 0 },
-        retry: { maxAttempts: 3, strategy: "JITTER" },
+        retry: { maxAttempts: 3, strategy: "JITTER" as const },
         stopCriteria: { minProducts: 10 }
       }]
     };
+
+    logger?.({
+      runId,
+      stage: 'claude_decision_fallback',
+      timestamp: new Date().toISOString(),
+      durationMs,
+      fallbackStrategy: hasJsonLd ? 'JSONLD' : 'HYBRID',
+      actionsCount: 1
+    });
+
+    return fallbackDecision;
   }
 }

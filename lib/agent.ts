@@ -2,24 +2,96 @@ import { HttpFetcher, ManagedBrowser, extractProductsHTML, BrowserClient } from 
 import { PageObservation, Product, TProduct, TPageObservation } from "./schemas";
 import { askClaudeForDecision } from "./brain";
 
-type Cfg = { anthropicKey: string; browser?: BrowserClient; maxTotalPages?: number; logs?: string[] };
+type Cfg = { 
+  anthropicKey: string; 
+  browser?: BrowserClient; 
+  maxTotalPages?: number; 
+  logs?: string[];
+  runId?: string;
+  logger?: (event: any) => void;
+};
 
 export async function scrapeProducts(startUrl: string, goal: string, cfg: Cfg) {
   if (!cfg.anthropicKey) throw new Error("Missing ANTHROPIC_API_KEY");
+  const startTime = performance.now();
   const logs: string[] = cfg.logs ?? [];
   const results: TProduct[] = [];
   const visited = new Set<string>();
   const q: string[] = [startUrl];
   let pagesProcessed = 0;
 
+  // Failure counters for summary
+  const failureCounters = {
+    httpErrors: 0,
+    noHtml: 0,
+    claudeErrors: 0,
+    parsingErrors: 0,
+    emptyResults: 0,
+    totalPages: 0
+  };
+
+  cfg.logger?.({
+    runId: cfg.runId,
+    stage: 'scrape_start',
+    timestamp: new Date().toISOString(),
+    startUrl,
+    goal: goal.substring(0, 100),
+    maxPages: cfg.maxTotalPages ?? 20
+  });
+
   while (q.length && pagesProcessed < (cfg.maxTotalPages ?? 20)) {
     const url = q.shift()!;
     if (visited.has(url)) continue;
     visited.add(url);
 
+    failureCounters.totalPages++;
     logs.push(`Fetch HTTP: ${url}`);
-    const observation: TPageObservation = await HttpFetcher.fetch(url);
-    const decision = await askClaudeForDecision(observation, goal, cfg.anthropicKey);
+    
+    let observation: TPageObservation;
+    try {
+      observation = await HttpFetcher.fetch(url);
+      
+      cfg.logger?.({
+        runId: cfg.runId,
+        stage: 'page_fetch',
+        timestamp: new Date().toISOString(),
+        url,
+        status: observation.status,
+        hasHtml: !!observation.html,
+        pageNumber: failureCounters.totalPages
+      });
+      
+      if (!observation.html) {
+        failureCounters.noHtml++;
+        logs.push("No HTML returned");
+        continue;
+      }
+    } catch (error) {
+      failureCounters.httpErrors++;
+      logs.push(`HTTP fetch failed: ${error}`);
+      cfg.logger?.({
+        runId: cfg.runId,
+        stage: 'page_fetch_error',
+        timestamp: new Date().toISOString(),
+        url,
+        error: error instanceof Error ? error.message : String(error),
+        pageNumber: failureCounters.totalPages
+      });
+      continue;
+    }
+
+    let decision;
+    try {
+      decision = await askClaudeForDecision(observation, goal, {
+        anthropicKey: cfg.anthropicKey,
+        runId: cfg.runId,
+        logger: cfg.logger
+      });
+    } catch (error) {
+      failureCounters.claudeErrors++;
+      logs.push(`Claude decision failed: ${error}`);
+      continue;
+    }
     logs.push(`Decision: ${short(decision.rationale)}; actions=${decision.actions.length}`);
 
     for (const action of decision.actions) {
@@ -35,43 +107,118 @@ export async function scrapeProducts(startUrl: string, goal: string, cfg: Cfg) {
       }
 
       pagesProcessed++;
-      if (!res.html) { logs.push("No HTML returned"); continue; }
+      if (!res.html) { 
+        failureCounters.noHtml++;
+        logs.push("No HTML returned"); 
+        continue; 
+      }
 
       let products: TProduct[] = [];
 
-      // Phase 1: Try fast extraction methods first
-      if (action.parseStrategy === "JSONLD" || action.parseStrategy === "HYBRID") {
-        products = products.concat(parseJsonLd(res.html));
-      }
-      if ((action.parseStrategy === "CSS" || action.parseStrategy === "HYBRID") && action.selectors) {
-        products = products.concat(extractProductsHTML(res.html, res.url, action.selectors).map(p => Product.parse(p)));
-      }
-
-      // Phase 2: If no products found, use direct Claude extraction (2025 upgrade)
-      if (products.length === 0 && cfg.anthropicKey) {
-        logs.push("→ No products from selectors, trying direct Claude extraction...");
-        const { extractWithClaude } = await import("./direct-extraction");
-        const claudeProducts = await extractWithClaude(res.html, res.url, goal, cfg.anthropicKey);
-        products = products.concat(claudeProducts);
-        if (claudeProducts.length > 0) {
-          logs.push(`✓ Claude extracted ${claudeProducts.length} products directly`);
+      try {
+        // Phase 1: Try fast extraction methods first
+        if (action.parseStrategy === "JSONLD" || action.parseStrategy === "HYBRID") {
+          products = products.concat(parseJsonLd(res.html));
         }
+        if ((action.parseStrategy === "CSS" || action.parseStrategy === "HYBRID") && action.selectors) {
+          products = products.concat(extractProductsHTML(res.html, res.url, action.selectors).map(p => Product.parse(p)));
+        }
+
+        // Phase 2: If no products found, use direct Claude extraction (2025 upgrade)
+        if (products.length === 0 && cfg.anthropicKey) {
+          logs.push("→ No products from selectors, trying direct Claude extraction...");
+          const { extractWithClaude } = await import("./direct-extraction");
+          const claudeProducts = await extractWithClaude(res.html, res.url, goal, cfg.anthropicKey);
+          products = products.concat(claudeProducts);
+          if (claudeProducts.length > 0) {
+            logs.push(`✓ Claude extracted ${claudeProducts.length} products directly`);
+          }
+        }
+      } catch (error) {
+        failureCounters.parsingErrors++;
+        logs.push(`Parsing failed: ${error}`);
+        cfg.logger?.({
+          runId: cfg.runId,
+          stage: 'extraction_error',
+          timestamp: new Date().toISOString(),
+          url: res.url,
+          error: error instanceof Error ? error.message : String(error),
+          parseStrategy: action.parseStrategy
+        });
       }
 
       const before = results.length;
       merge(results, products);
-      logs.push(`Parsed +${results.length - before} items (total ${results.length})`);
+      const newProducts = results.length - before;
+      
+      if (products.length === 0) {
+        failureCounters.emptyResults++;
+      }
+      
+      logs.push(`Parsed +${newProducts} items (total ${results.length})`);
+
+      cfg.logger?.({
+        runId: cfg.runId,
+        stage: 'extraction_results',
+        timestamp: new Date().toISOString(),
+        url: res.url,
+        newProducts,
+        totalProducts: results.length,
+        parseStrategy: action.parseStrategy,
+        hasSelectors: !!action.selectors
+      });
 
       // Try simple pagination link discovery
       const nexts = findNextLinks(res.html!, res.url, action.pagination?.selector);
       for (const n of nexts) if (!visited.has(n)) q.push(n);
 
+      cfg.logger?.({
+        runId: cfg.runId,
+        stage: 'pagination_links',
+        timestamp: new Date().toISOString(),
+        url: res.url,
+        paginationLinks: nexts.length,
+        queueSize: q.length
+      });
+
       if (results.length >= (action.stopCriteria?.minProducts ?? 10)) {
         logs.push(`Stop criterion met: ${results.length} >= ${action.stopCriteria?.minProducts}`);
+        
+        const durationMs = Math.round(performance.now() - startTime);
+        const summary = {
+          runId: cfg.runId,
+          stage: 'scrape_complete_early',
+          timestamp: new Date().toISOString(),
+          durationMs,
+          totalProducts: results.length,
+          pagesProcessed,
+          stopReason: 'min_products_reached',
+          failureCounters,
+          successRate: pagesProcessed > 0 ? ((pagesProcessed - failureCounters.httpErrors - failureCounters.noHtml - failureCounters.claudeErrors) / pagesProcessed * 100).toFixed(1) + '%' : '0%'
+        };
+        
+        cfg.logger?.(summary);
+        logs.push(`Summary: ${JSON.stringify(summary)}`);
         return results;
       }
     }
   }
+  
+  const durationMs = Math.round(performance.now() - startTime);
+  const summary = {
+    runId: cfg.runId,
+    stage: 'scrape_complete',
+    timestamp: new Date().toISOString(),
+    durationMs,
+    totalProducts: results.length,
+    pagesProcessed,
+    stopReason: q.length === 0 ? 'no_more_pages' : 'max_pages_reached',
+    failureCounters,
+    successRate: pagesProcessed > 0 ? ((pagesProcessed - failureCounters.httpErrors - failureCounters.noHtml - failureCounters.claudeErrors) / pagesProcessed * 100).toFixed(1) + '%' : '0%'
+  };
+  
+  cfg.logger?.(summary);
+  logs.push(`Summary: ${JSON.stringify(summary)}`);
   return results;
 }
 
