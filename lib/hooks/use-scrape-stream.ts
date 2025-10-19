@@ -1,9 +1,6 @@
 import { useState, useCallback } from 'react'
 
-interface ScrapeStreamEvent {
-  type: 'job-created' | 'logs' | 'progress' | 'complete' | 'error'
-  data: any
-}
+// ScrapeStreamEvent interface removed - not currently used
 
 export function useScrapeStream() {
   const [isStreaming, setIsStreaming] = useState(false)

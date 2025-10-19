@@ -12,7 +12,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "verify:scrape": "ts-node scripts/run-scrape.ts"
+    "verify:scrape": "tsx scripts/run-scrape.ts"
   },
   "dependencies": {
     "next": "^15.5.3",
@@ -33,7 +33,6 @@
     "postcss": "^8.4.47",
     "autoprefixer": "^10.4.20",
     "tsx": "^4.19.1",
-    "ts-node": "^10.9.2",
     "@types/node": "^24.5.2",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",

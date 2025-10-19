@@ -18,27 +18,28 @@ const RequestSchema = z.object({
   }).optional(),
 })
 
-const ResponseSchema = z.object({
-  success: z.boolean(),
-  data: z.object({
-    jobId: z.string(),
-    products: z.array(z.any()),
-    stats: z.object({
-      pagesProcessed: z.number(),
-      productsFound: z.number(),
-      duration: z.number(),
-    }),
-  }).optional(),
-  error: z.object({
-    code: z.string(),
-    message: z.string(),
-    details: z.any().optional(),
-  }).optional(),
-  meta: z.object({
-    version: z.string(),
-    timestamp: z.string(),
-  }),
-})
+// ResponseSchema removed - not currently used but may be needed for future validation
+// const ResponseSchema = z.object({
+//   success: z.boolean(),
+//   data: z.object({
+//     jobId: z.string(),
+//     products: z.array(z.any()),
+//     stats: z.object({
+//       pagesProcessed: z.number(),
+//       productsFound: z.number(),
+//       duration: z.number(),
+//     }),
+//   }).optional(),
+//   error: z.object({
+//     code: z.string(),
+//     message: z.string(),
+//     details: z.any().optional(),
+//   }).optional(),
+//   meta: z.object({
+//     version: z.string(),
+//     timestamp: z.string(),
+//   }),
+// })
 
 export async function POST(req: NextRequest) {
   const startTime = Date.now()

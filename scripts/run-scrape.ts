@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env tsx
 
 /**
  * FetchPilot Batch Scraping Script
@@ -7,7 +7,7 @@
  * saves metrics to database, and outputs summary to stdout.
  * 
  * Usage:
- *   ts-node scripts/run-scrape.ts [config.json]
+ *   tsx scripts/run-scrape.ts [config.json]
  *   npm run verify:scrape
  * 
  * Config format:

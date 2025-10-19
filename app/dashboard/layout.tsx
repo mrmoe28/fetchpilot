@@ -2,7 +2,7 @@ import { ReactNode } from 'react'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { LayoutDashboard, Calendar, User, Settings, Home, FolderOpen } from 'lucide-react'
+import { LayoutDashboard, Calendar, User, Settings, Home, FolderOpen, Activity } from 'lucide-react'
 import { clsx } from 'clsx'
 
 interface DashboardLayoutProps {
@@ -12,6 +12,7 @@ interface DashboardLayoutProps {
 const navItems = [
   { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Categories', href: '/dashboard/categories', icon: FolderOpen },
+  { name: 'Insights', href: '/dashboard/metrics', icon: Activity },
   { name: 'Scheduled Jobs', href: '/dashboard/scheduled', icon: Calendar },
   { name: 'Profile', href: '/dashboard/profile', icon: User },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Edit2, Trash2, FolderOpen, Tag } from 'lucide-react'
+import { Plus, Edit2, Trash2, FolderOpen } from 'lucide-react'
 import Button from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import Input from '@/components/ui/input'

@@ -1,28 +1,7 @@
 import { AgentDecision, PageObservation, TAgentDecision } from "./schemas";
 import * as cheerio from "cheerio";
 
-/**
- * Preprocesses HTML to optimize for Claude token usage
- * Removes scripts, styles, comments and keeps only semantic content
- */
-function preprocessHTML(html: string): string {
-  const $ = cheerio.load(html);
-
-  // Remove noise
-  $('script, style, noscript, iframe, svg, meta, link[rel="stylesheet"]').remove();
-  $('*').removeAttr('style').removeAttr('onclick').removeAttr('onload');
-
-  // Remove comments
-  $('*').contents().filter(function() {
-    return this.type === 'comment';
-  }).remove();
-
-  // Get body content only
-  const body = $('body').html() || $.html();
-
-  // Simplify whitespace
-  return body.replace(/\s+/g, ' ').substring(0, 50000); // Limit to ~50k chars
-}
+// preprocessHTML function removed - was not being used in current implementation
 
 /**
  * Extracts sample HTML snippets that likely contain product information

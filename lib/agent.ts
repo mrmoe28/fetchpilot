@@ -1,5 +1,5 @@
 import { HttpFetcher, ManagedBrowser, extractProductsHTML, BrowserClient } from "./tools";
-import { PageObservation, Product, TProduct, TPageObservation } from "./schemas";
+import { Product, TProduct, TPageObservation } from "./schemas";
 import { askClaudeForDecision } from "./brain";
 
 type Cfg = { 
