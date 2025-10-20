@@ -57,6 +57,33 @@ export async function POST(req: NextRequest) {
       console.log('Password reset tokens table already exists')
     }
 
+    // Check if category_id column exists in scraped_products table
+    const categoryColumnCheck = await db.execute(sql`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'scraped_products' 
+      AND column_name = 'category_id'
+    `)
+
+    if (categoryColumnCheck.rows.length === 0) {
+      console.log('Adding category_id column to scraped_products table...')
+      await db.execute(sql`ALTER TABLE "scraped_products" ADD COLUMN "category_id" uuid`)
+      await db.execute(sql`ALTER TABLE "scraped_products" ADD COLUMN "description" text`)
+      await db.execute(sql`ALTER TABLE "scraped_products" ADD COLUMN "brand" varchar(255)`)
+      await db.execute(sql`ALTER TABLE "scraped_products" ADD COLUMN "rating" varchar(50)`)
+      await db.execute(sql`ALTER TABLE "scraped_products" ADD COLUMN "review_count" integer`)
+      await db.execute(sql`
+        ALTER TABLE "scraped_products" 
+        ADD CONSTRAINT "scraped_products_category_id_categories_id_fk" 
+        FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") 
+        ON DELETE set null ON UPDATE no action
+      `)
+      await db.execute(sql`CREATE INDEX "scraped_products_category_id_idx" ON "scraped_products" USING btree ("category_id")`)
+      console.log('Category columns added successfully')
+    } else {
+      console.log('Category column already exists in scraped_products table')
+    }
+
     return NextResponse.json({
       message: 'Migration completed successfully',
       timestamp: new Date().toISOString()
