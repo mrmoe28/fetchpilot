@@ -148,7 +148,7 @@ export const buttonTap = {
 export function getMotionVariant(
   normal: any,
   reduced: any,
-  prefersReducedMotion?: boolean
+  prefersReducedMotion?: boolean | null
 ) {
   return prefersReducedMotion ? reduced : normal
 }

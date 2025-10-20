@@ -6,8 +6,6 @@ import { ChevronLeft, ChevronRight, Star, Quote } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { 
   fadeInUp,
-  fadeInLeft,
-  fadeInRight,
   fadeInUpReduced,
   getMotionVariant
 } from "@/lib/utils/animations"

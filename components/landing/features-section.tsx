@@ -7,10 +7,8 @@ import {
   staggerContainer, 
   staggerItem, 
   fadeInUp,
-  scaleIn,
   staggerContainerReduced,
   fadeInUpReduced,
-  scaleInReduced,
   getMotionVariant
 } from "@/lib/utils/animations"
 

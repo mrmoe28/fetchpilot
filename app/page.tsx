@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { redirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import ScraperForm from "@/components/scraper-form";
 import ResultsTable from "@/components/results-table";

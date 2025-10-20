@@ -6,8 +6,6 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { 
   fadeInUp, 
-  fadeInLeft, 
-  fadeInRight, 
   scaleIn,
   fadeInUpReduced,
   scaleInReduced,
