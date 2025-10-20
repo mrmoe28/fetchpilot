@@ -66,6 +66,16 @@ export default function Page() {
 
   // Middleware now handles authentication redirects
 
+  // Fetch categories on mount
+  useEffect(() => {
+    if (session?.user) {
+      fetch('/api/categories')
+        .then(res => res.json())
+        .then(data => setCategories(data))
+        .catch(console.error)
+    }
+  }, [session])
+
   if (status === "loading") {
     return (
       <div className="min-h-screen grid place-content-center">
@@ -82,16 +92,6 @@ export default function Page() {
   if (!session?.user) {
     return null
   }
-
-  // Fetch categories on mount
-  useEffect(() => {
-    if (session?.user) {
-      fetch('/api/categories')
-        .then(res => res.json())
-        .then(data => setCategories(data))
-        .catch(console.error)
-    }
-  }, [session])
 
   async function runScrape(input: { url: string; goal?: string }) {
     setLoading(true);
