@@ -2,14 +2,12 @@ import NextAuth from "next-auth"
 import type { NextAuthConfig } from "next-auth"
 import Google from "next-auth/providers/google"
 import Credentials from "next-auth/providers/credentials"
-import { DrizzleAdapter } from "@auth/drizzle-adapter"
 import { db } from "@/lib/db"
 import { users } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import bcrypt from "bcryptjs"
 
 export const authConfig: NextAuthConfig = {
-  adapter: DrizzleAdapter(db),
   basePath: "/api/auth",
   providers: [
     Google({
