@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { scrapingJobs, scrapedProducts, categories } from '@/lib/db/schema'
-import { eq, desc, count, and, sql } from 'drizzle-orm'
+import { eq, desc, count, and } from 'drizzle-orm'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import Badge from '@/components/ui/badge'
 import { 
