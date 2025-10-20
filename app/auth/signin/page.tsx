@@ -1,20 +1,30 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { signIn } from 'next-auth/react'
 import { Card, CardContent } from '@/components/ui/card'
 import Button from '@/components/ui/button'
 import Input from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PlaneTakeoff, Eye, EyeOff, Loader } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 
-export default function SignInPage() {
+function SignInForm() {
+  const searchParams = useSearchParams()
   const [mode, setMode] = useState<'signin' | 'signup' | 'reset'>('signin')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
-  const router = useRouter()
+
+  // Check for NextAuth error in URL
+  useEffect(() => {
+    const authError = searchParams.get('error')
+    if (authError === 'CredentialsSignin') {
+      setError('Invalid email or password')
+    } else if (authError) {
+      setError('Authentication failed. Please try again.')
+    }
+  }, [searchParams])
 
   const [formData, setFormData] = useState({
     name: '',
@@ -31,17 +41,13 @@ export default function SignInPage() {
 
     try {
       if (mode === 'signin') {
-        const result = await signIn('credentials', {
+        // Use redirect: true to let NextAuth handle the redirect after session is established
+        // This prevents 404 errors caused by navigating before database session is ready
+        await signIn('credentials', {
           email: formData.email,
           password: formData.password,
-          redirect: false
+          callbackUrl: '/dashboard'
         })
-
-        if (result?.error) {
-          setError('Invalid email or password')
-        } else {
-          router.push('/dashboard')
-        }
       } else if (mode === 'signup') {
         if (formData.password !== formData.confirmPassword) {
           setError('Passwords do not match')
@@ -274,5 +280,17 @@ export default function SignInPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen grid place-content-center">
+        <Loader className="w-8 h-8 animate-spin text-fetchpilot-primary" />
+      </div>
+    }>
+      <SignInForm />
+    </Suspense>
   )
 }
