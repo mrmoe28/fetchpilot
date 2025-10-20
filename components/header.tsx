@@ -24,8 +24,32 @@ export default async function Header() {
           </div>
         </Link>
 
-        <div className="flex items-center gap-3">
-          {/* GitHub link hidden for private repo */}
+        <div className="flex items-center gap-2">
+          {session?.user && (
+            <>
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-white/60 transition-all duration-200"
+              >
+                <span className="hidden md:inline">Dashboard</span>
+                <span className="md:hidden">📊</span>
+              </Link>
+              <Link
+                href="/dashboard/categories"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-white/60 transition-all duration-200"
+              >
+                <span className="hidden md:inline">Categories</span>
+                <span className="md:hidden">📁</span>
+              </Link>
+              <Link
+                href="/dashboard/scheduled"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-white/60 transition-all duration-200"
+              >
+                <span className="hidden md:inline">Scheduled</span>
+                <span className="md:hidden">⏰</span>
+              </Link>
+            </>
+          )}
           <a
             href="/docs"
             className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-white/60 transition-all duration-200"
