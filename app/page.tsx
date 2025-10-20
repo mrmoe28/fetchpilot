@@ -56,12 +56,7 @@ export default function Page() {
   const [logs, setLogs] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      // Redirect to landing page instead of signin
-      window.location.href = '/landing'
-    }
-  }, [status])
+  // Middleware now handles authentication redirects
 
   if (status === "loading") {
     return (

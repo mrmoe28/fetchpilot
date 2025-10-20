@@ -2,13 +2,16 @@ import { HttpFetcher, ManagedBrowser, extractProductsHTML, BrowserClient } from 
 import { Product, TProduct, TPageObservation } from "./schemas";
 import { askClaudeForDecision } from "./brain";
 
-type Cfg = { 
-  anthropicKey: string; 
-  browser?: BrowserClient; 
-  maxTotalPages?: number; 
+type Cfg = {
+  anthropicKey: string;
+  browser?: BrowserClient;
+  maxTotalPages?: number;
   logs?: string[];
   runId?: string;
   logger?: (event: any) => void;
+  llmProvider?: 'anthropic' | 'ollama';
+  ollamaBaseUrl?: string;
+  ollamaModel?: string;
   customSelectors?: {
     item?: string;
     link?: string;
@@ -19,7 +22,10 @@ type Cfg = {
 };
 
 export async function scrapeProducts(startUrl: string, goal: string, cfg: Cfg) {
-  if (!cfg.anthropicKey) throw new Error("Missing ANTHROPIC_API_KEY");
+  // Only require anthropicKey if using Anthropic provider
+  if (cfg.llmProvider !== 'ollama' && !cfg.anthropicKey) {
+    throw new Error("Missing ANTHROPIC_API_KEY");
+  }
   const startTime = performance.now();
   const logs: string[] = cfg.logs ?? [];
   const results: TProduct[] = [];
@@ -92,7 +98,10 @@ export async function scrapeProducts(startUrl: string, goal: string, cfg: Cfg) {
       decision = await askClaudeForDecision(observation, goal, {
         anthropicKey: cfg.anthropicKey,
         runId: cfg.runId,
-        logger: cfg.logger
+        logger: cfg.logger,
+        llmProvider: cfg.llmProvider,
+        ollamaBaseUrl: cfg.ollamaBaseUrl,
+        ollamaModel: cfg.ollamaModel
       });
     } catch (error) {
       failureCounters.claudeErrors++;

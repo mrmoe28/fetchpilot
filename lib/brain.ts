@@ -39,11 +39,14 @@ interface ClaudeConfig {
   anthropicKey: string;
   runId?: string;
   logger?: (event: any) => void;
+  llmProvider?: 'anthropic' | 'ollama';
+  ollamaBaseUrl?: string;
+  ollamaModel?: string;
 }
 
 export async function askClaudeForDecision(obs: typeof PageObservation._type, goal: string, cfg: ClaudeConfig): Promise<TAgentDecision> {
   const startTime = performance.now();
-  const { anthropicKey, runId, logger } = cfg;
+  const { anthropicKey, runId, logger, llmProvider = 'anthropic', ollamaBaseUrl = 'http://localhost:11434', ollamaModel = 'llama3.3' } = cfg;
   
   logger?.({
     runId,
@@ -132,29 +135,62 @@ Analyze this HTML and create an extraction strategy. Return a JSON object with:
 IMPORTANT: Base selectors on the ACTUAL HTML provided, not generic patterns. If you cannot identify clear product patterns, say so in the rationale.`;
 
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": anthropicKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-3-5-sonnet-20241022", // Specific model version
-        max_tokens: 2000,
-        temperature: 0.3, // Lower temperature for more consistent output
-        system,
-        messages: [{ role: "user", content: user }]
-      }),
-    });
+    // Choose API based on provider
+    let res: Response;
+
+    if (llmProvider === 'ollama') {
+      // Ollama API call
+      res = await fetch(`${ollamaBaseUrl}/api/chat`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: ollamaModel,
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: user }
+          ],
+          stream: false,
+          options: {
+            temperature: 0.3,
+            num_predict: 2000,
+          }
+        }),
+      });
+    } else {
+      // Anthropic API call
+      res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": anthropicKey,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-3-5-sonnet-20241022", // Specific model version
+          max_tokens: 2000,
+          temperature: 0.3, // Lower temperature for more consistent output
+          system,
+          messages: [{ role: "user", content: user }]
+        }),
+      });
+    }
 
     if (!res.ok) {
       const errorText = await res.text();
-      throw new Error(`Claude API error (${res.status}): ${errorText}`);
+      throw new Error(`${llmProvider === 'ollama' ? 'Ollama' : 'Claude'} API error (${res.status}): ${errorText}`);
     }
 
     const data = await res.json();
-    const text = data?.content?.[0]?.text ?? "";
+
+    // Extract text based on provider
+    let text: string;
+    if (llmProvider === 'ollama') {
+      text = data?.message?.content ?? "";
+    } else {
+      text = data?.content?.[0]?.text ?? "";
+    }
     
     // Capture token usage if available
     const tokenUsage = data?.usage ? {
