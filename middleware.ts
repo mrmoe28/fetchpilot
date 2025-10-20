@@ -17,7 +17,9 @@ export default auth((req) => {
   // API routes that allow anonymous access
   const publicApiRoutes = [
     '/api/auth',
-    '/api/v1'
+    '/api/v1',
+    '/api/health',
+    '/api/debug'
   ]
 
   // Check if current path is public
