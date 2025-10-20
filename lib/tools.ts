@@ -51,7 +51,7 @@ export const ManagedBrowser: BrowserClient | undefined = process.env.BROWSER_WOR
     }
   : undefined;
 
-export function extractProductsHTML(html: string, baseUrl: string, sel: { item?: string; link?: string; title?: string; price?: string; image?: string }) {
+export function extractProductsHTML(html: string, baseUrl: string, sel: { item?: string; link?: string; title?: string; price?: string; image?: string; description?: string; brand?: string; rating?: string; sku?: string }) {
   const out: any[] = [];
   const $ = cheerio.load(html);
   const toAbs = (href?: string) => {
@@ -65,7 +65,26 @@ export function extractProductsHTML(html: string, baseUrl: string, sel: { item?:
       const title = sel.title ? $(el).find(sel.title).text().trim() : "";
       const price = sel.price ? $(el).find(sel.price).text().trim() : undefined;
       const image = sel.image ? ($(el).find(sel.image).attr("src") || $(el).find(sel.image).attr("data-src") || $(el).find(sel.image).attr("srcset")?.split(" ").shift()) : undefined;
-      if (url && title) out.push({ url: toAbs(url), title, price, image: image ? toAbs(image) : undefined });
+
+      // Extract additional product details
+      const description = sel.description ? $(el).find(sel.description).text().trim() : undefined;
+      const brand = sel.brand ? $(el).find(sel.brand).text().trim() : undefined;
+      const rating = sel.rating ? $(el).find(sel.rating).text().trim() : undefined;
+      const sku = sel.sku ? $(el).find(sel.sku).text().trim() : undefined;
+
+      // Price is now mandatory - skip products without price
+      if (url && title && price) {
+        out.push({
+          url: toAbs(url),
+          title,
+          price,
+          image: image ? toAbs(image) : undefined,
+          description,
+          brand,
+          rating,
+          sku
+        });
+      }
     });
   }
   return out;

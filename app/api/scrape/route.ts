@@ -7,7 +7,7 @@ export const preferredRegion = "home";
 
 const Body = z.object({
   url: z.string().url(),
-  goal: z.string().optional().default("Extract product cards and canonical links")
+  goal: z.string().optional().default("Extract all products with prices, titles, images, and product details including descriptions, brands, ratings, and SKUs when available")
 });
 
 export async function POST(req: NextRequest) {

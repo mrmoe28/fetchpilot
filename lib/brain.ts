@@ -79,8 +79,12 @@ CRITICAL RULES:
 1. Do NOT fabricate data or selectors - only use what you see in the HTML
 2. Be SPECIFIC with selectors - use actual class names, data attributes, or IDs from the HTML
 3. Prefer JSON-LD extraction when available (check hasJsonLd signal)
-4. Test your selector strategy mentally before responding
-5. If uncertain, ask for clarification rather than guessing
+4. ALWAYS prioritize extracting PRICE and product details - these are MANDATORY fields
+5. Look for prices in various formats: $XX.XX, €XX, £XX, numbers with currency symbols, .price classes, etc.
+6. Test your selector strategy mentally before responding
+7. If uncertain, ask for clarification rather than guessing
+
+PRICE EXTRACTION IS MANDATORY - ensure your selectors will capture price information.
 
 Your response MUST be valid JSON matching the AgentDecision schema.`;
 
@@ -109,8 +113,12 @@ Analyze this HTML and create an extraction strategy. Return a JSON object with:
       "item": "CSS selector for product containers (be specific)",
       "link": "CSS selector for product links within items",
       "title": "CSS selector for product titles within items",
-      "price": "CSS selector for prices within items",
-      "image": "CSS selector for product images within items"
+      "price": "CSS selector for prices - MANDATORY FIELD - look for .price, [class*='price'], .cost, .amount, spans with currency symbols, etc.",
+      "image": "CSS selector for product images within items",
+      "description": "CSS selector for product description/details (optional)",
+      "brand": "CSS selector for brand/manufacturer name (optional)",
+      "rating": "CSS selector for product rating (optional)",
+      "sku": "CSS selector for SKU/product code (optional)"
     },
     "pagination": {
       "type": "LINK",
@@ -260,11 +268,15 @@ IMPORTANT: Base selectors on the ACTUAL HTML provided, not generic patterns. If 
           mode: "HTTP" as const,
           parseStrategy: hasJsonLd ? "JSONLD" as const : "HYBRID" as const,
           selectors: {
-            item: "article.product_pod, article, .product, .product-card, .product-item, [data-product], li.item, .book, .col-lg-3, .col-md-3",
-            link: "h3 a, a[href*='catalogue'], a[href*='product'], a.product-link, a[href]",
-            title: "h3 a, h2, h3, .title, .product-title, .name, [alt]",
-            price: ".price_color, .price, [class*='price'], [class*='cost'], .money, .amount",
-            image: ".image_container img, img.thumbnail, img"
+            item: "article.product_pod, article, .product, .product-card, .product-item, [data-product], li.item, .book, .col-lg-3, .col-md-3, [itemtype*='Product']",
+            link: "h3 a, a[href*='catalogue'], a[href*='product'], a.product-link, a[href], [itemprop='url']",
+            title: "h3 a, h2, h3, .title, .product-title, .name, [alt], [itemprop='name']",
+            price: ".price_color, .price, [class*='price'], [class*='cost'], .money, .amount, [itemprop='price'], span:contains('$'), span:contains('€'), span:contains('£')",
+            image: ".image_container img, img.thumbnail, img, [itemprop='image']",
+            description: ".description, .product-description, [itemprop='description'], .details",
+            brand: ".brand, [itemprop='brand'], .manufacturer",
+            rating: ".rating, .stars, [itemprop='ratingValue'], .review-rating",
+            sku: ".sku, [itemprop='sku'], .product-code"
           },
           pagination: {
             type: "LINK" as const,
@@ -319,11 +331,15 @@ IMPORTANT: Base selectors on the ACTUAL HTML provided, not generic patterns. If 
         mode: "HTTP" as const,
         parseStrategy: hasJsonLd ? "JSONLD" as const : "HYBRID" as const,
         selectors: {
-          item: "article.product_pod, article, .product, .product-card, .product-item, [data-product], li.item, .book, .col-lg-3, .col-md-3",
-          link: "h3 a, a[href*='catalogue'], a[href*='product'], a.product-link, a[href]",
-          title: "h3 a, h2, h3, .title, .product-title, .name, [alt]",
-          price: ".price_color, .price, [class*='price'], [class*='cost'], .money, .amount",
-          image: ".image_container img, img.thumbnail, img"
+          item: "article.product_pod, article, .product, .product-card, .product-item, [data-product], li.item, .book, .col-lg-3, .col-md-3, [itemtype*='Product']",
+          link: "h3 a, a[href*='catalogue'], a[href*='product'], a.product-link, a[href], [itemprop='url']",
+          title: "h3 a, h2, h3, .title, .product-title, .name, [alt], [itemprop='name']",
+          price: ".price_color, .price, [class*='price'], [class*='cost'], .money, .amount, [itemprop='price'], span:contains('$'), span:contains('€'), span:contains('£')",
+          image: ".image_container img, img.thumbnail, img, [itemprop='image']",
+          description: ".description, .product-description, [itemprop='description'], .details",
+          brand: ".brand, [itemprop='brand'], .manufacturer",
+          rating: ".rating, .stars, [itemprop='ratingValue'], .review-rating",
+          sku: ".sku, [itemprop='sku'], .product-code"
         },
         pagination: {
           type: "LINK" as const,

@@ -3,11 +3,15 @@ import { z } from "zod";
 export const Product = z.object({
   url: z.string().url(),
   title: z.string(),
-  price: z.string().optional(),
+  price: z.string(), // REQUIRED: Always extract price
   image: z.string().url().optional(),
   inStock: z.boolean().optional(),
   sku: z.string().optional(),
   currency: z.string().optional(),
+  description: z.string().optional(), // Product description/details
+  brand: z.string().optional(), // Product brand/manufacturer
+  rating: z.string().optional(), // Product rating if available
+  reviewCount: z.string().optional(), // Number of reviews
   breadcrumbs: z.array(z.string()).optional(),
   extra: z.record(z.any()).optional(),
 });
@@ -32,8 +36,12 @@ export const AgentAction = z.object({
     item: z.string().optional(),
     link: z.string().optional(),
     title: z.string().optional(),
-    price: z.string().optional(),
+    price: z.string().optional(), // CSS selector for price - prioritize this field
     image: z.string().optional(),
+    description: z.string().optional(), // Product description/details
+    brand: z.string().optional(), // Brand/manufacturer
+    rating: z.string().optional(), // Rating value
+    sku: z.string().optional(), // SKU/product code
   }).optional(),
   pagination: z.object({
     type: z.enum(["LINK","BUTTON","SCROLL","PARAMS","NONE"]),
