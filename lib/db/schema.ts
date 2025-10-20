@@ -41,7 +41,9 @@ export const verificationTokens = pgTable('verification_tokens', {
   identifier: varchar('identifier', { length: 255 }).notNull(),
   token: varchar('token', { length: 255 }).notNull().unique(),
   expires: timestamp('expires').notNull(),
-})
+}, (table) => ({
+  compositePk: index('verification_tokens_pk').on(table.identifier, table.token),
+}))
 
 // Categories table
 export const categories = pgTable('categories', {

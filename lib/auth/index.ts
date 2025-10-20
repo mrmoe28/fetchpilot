@@ -7,10 +7,18 @@ import { db } from "@/lib/db"
 
 export const authConfig: NextAuthConfig = {
   adapter: DrizzleAdapter(db),
+  basePath: "/api/auth",
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code"
+        }
+      }
     }),
     GitHub({
       clientId: process.env.GITHUB_ID,
@@ -21,6 +29,7 @@ export const authConfig: NextAuthConfig = {
     signIn: "/auth/signin",
     error: "/auth/error",
   },
+  trustHost: true,
   callbacks: {
     async session({ session, user }) {
       if (session.user) {
@@ -28,7 +37,7 @@ export const authConfig: NextAuthConfig = {
       }
       return session
     },
-    async signIn({ user }) {
+    async signIn() {
       return true
     },
     async redirect({ url, baseUrl }) {

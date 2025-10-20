@@ -1,4 +1,4 @@
-import { PlaneTakeoff, Github, BookOpen } from "lucide-react";
+import { PlaneTakeoff, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { UserMenu } from "./user-menu";
@@ -25,15 +25,7 @@ export default async function Header() {
         </Link>
 
         <div className="flex items-center gap-3">
-          <a
-            href="https://github.com/mrmoe28/fetchpilot"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-white/60 transition-all duration-200"
-          >
-            <Github className="w-4 h-4" />
-            <span className="hidden md:inline">GitHub</span>
-          </a>
+          {/* GitHub link hidden for private repo */}
           <a
             href="/docs"
             className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-white/60 transition-all duration-200"
