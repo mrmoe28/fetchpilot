@@ -110,31 +110,32 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'No tag IDs provided' }, { status: 400 })
     }
 
-    // Verify ownership - get tags that belong to this user
+    // Verify ownership - only get tags that belong to this user
     const userTags = await db
       .select({ id: tags.id })
       .from(tags)
       .where(and(
         eq(tags.userId, session.user.id),
-        // Use inArray from drizzle-orm for filtering by multiple IDs
-        tags.id.toString().length > 0 // placeholder, will fix with proper import
+        inArray(tags.id, tagIds)
       ))
+
+    const validTagIds = userTags.map(t => t.id)
+
+    if (validTagIds.length === 0) {
+      return NextResponse.json({ error: 'No valid tags found to delete' }, { status: 404 })
+    }
 
     // First delete all job_tags relationships for these tags
     await db
       .delete(jobTags)
-      .where(
-        // Delete job_tags entries where tagId is in the list of tags to delete
-        jobTags.tagId.toString().length > 0 // will be replaced with inArray
-      )
+      .where(inArray(jobTags.tagId, validTagIds))
 
     // Then delete the tags themselves
     const deletedTags = await db
       .delete(tags)
       .where(and(
         eq(tags.userId, session.user.id),
-        // Filter by the specific tag IDs
-        tags.id.toString().length > 0 // will be replaced with inArray
+        inArray(tags.id, validTagIds)
       ))
       .returning({ id: tags.id, name: tags.name })
 
