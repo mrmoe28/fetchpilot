@@ -3,10 +3,9 @@ import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { Card, CardContent } from '@/components/ui/card'
 import Button from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import Input from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PlaneTakeoff, Eye, EyeOff, Loader } from 'lucide-react'
-import type { Metadata } from 'next'
 import { useRouter } from 'next/navigation'
 
 export default function SignInPage() {
@@ -78,7 +77,7 @@ export default function SignInPage() {
         const data = await response.json()
         setMessage(data.message)
       }
-    } catch (err) {
+    } catch {
       setError('Something went wrong. Please try again.')
     } finally {
       setLoading(false)
