@@ -6,7 +6,7 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth
   const { pathname } = nextUrl
 
-  console.log(`[MIDDLEWARE] ${pathname} - Authenticated: ${isLoggedIn}`)
+  // Middleware logic for authentication
 
   // 1. Allow all API routes (they handle their own auth if needed)
   if (pathname.startsWith('/api/')) {
