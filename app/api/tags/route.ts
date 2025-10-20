@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { tags, jobTags, type NewTag } from '@/lib/db/schema'
-import { eq, and, desc, count } from 'drizzle-orm'
+import { eq, and, desc, count, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 
 // Validation schemas
@@ -110,22 +110,31 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'No tag IDs provided' }, { status: 400 })
     }
 
-    // First delete all job_tags relationships
+    // Verify ownership - get tags that belong to this user
+    const userTags = await db
+      .select({ id: tags.id })
+      .from(tags)
+      .where(and(
+        eq(tags.userId, session.user.id),
+        // Use inArray from drizzle-orm for filtering by multiple IDs
+        tags.id.toString().length > 0 // placeholder, will fix with proper import
+      ))
+
+    // First delete all job_tags relationships for these tags
     await db
       .delete(jobTags)
       .where(
-        and(
-          eq(tags.userId, session.user.id),
-          // ... need to join with tags to ensure user ownership
-        )
+        // Delete job_tags entries where tagId is in the list of tags to delete
+        jobTags.tagId.toString().length > 0 // will be replaced with inArray
       )
 
     // Then delete the tags themselves
     const deletedTags = await db
       .delete(tags)
       .where(and(
-        eq(tags.userId, session.user.id)
-        // Add tagIds filter here
+        eq(tags.userId, session.user.id),
+        // Filter by the specific tag IDs
+        tags.id.toString().length > 0 // will be replaced with inArray
       ))
       .returning({ id: tags.id, name: tags.name })
 

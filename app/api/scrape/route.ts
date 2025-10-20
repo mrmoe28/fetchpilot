@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { scrapeProducts } from "@/lib/agent";
 import { auth } from "@/lib/auth";
-import { saveScrapeRun } from "@/lib/db";
+import { saveScrapeRun, db } from "@/lib/db";
+import { scrapingJobs, scrapedProducts } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 
@@ -21,8 +23,24 @@ export async function POST(req: NextRequest) {
     const json = await req.json();
     const { url, goal } = Body.parse(json);
 
+    // Create job in database if user is authenticated
+    let jobId: string | undefined;
+
+    if (session?.user?.id) {
+      const [job] = await db.insert(scrapingJobs).values({
+        userId: session.user.id,
+        url,
+        goal: goal!,
+        status: 'running',
+        startedAt: new Date(),
+        config: { maxTotalPages: 12 },
+      }).returning();
+
+      jobId = job.id;
+    }
+
     // Generate run ID for tracking
-    const runId = nanoid();
+    const runId = jobId || nanoid();
 
     // Determine LLM provider from environment
     const llmProvider = (process.env.LLM_PROVIDER as 'anthropic' | 'ollama') || 'ollama';
@@ -47,8 +65,41 @@ export async function POST(req: NextRequest) {
     const duration = Date.now() - startTime;
     const finishedAt = new Date();
 
-    // Record metrics for insights dashboard
-    if (session?.user?.id) {
+    // Save products and update job if authenticated
+    if (jobId && session?.user?.id) {
+      if (products.length > 0) {
+        await db.insert(scrapedProducts).values(
+          products.map(p => ({
+            jobId,
+            categoryId: (p as any).categoryId || null,
+            url: p.url,
+            title: p.title,
+            price: p.price,
+            image: p.image,
+            inStock: p.inStock,
+            sku: p.sku,
+            currency: p.currency,
+            description: (p as any).description || null,
+            brand: (p as any).brand || null,
+            rating: (p as any).rating || null,
+            reviewCount: (p as any).reviewCount || null,
+            breadcrumbs: p.breadcrumbs,
+            extra: p.extra,
+          }))
+        );
+      }
+
+      await db.update(scrapingJobs)
+        .set({
+          status: 'completed',
+          completedAt: finishedAt,
+          productsFound: products.length,
+          logs,
+          pagesProcessed: logs.filter(l => l.includes('Fetch HTTP')).length,
+        })
+        .where(eq(scrapingJobs.id, jobId));
+
+      // Record metrics for insights dashboard
       await saveScrapeRun({
         runId,
         userId: session.user.id,

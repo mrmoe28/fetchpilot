@@ -246,11 +246,42 @@ export default function Page() {
   async function handleBatchCategorize() {
     if (!selectedItems.length || !batchCategoryId) return;
 
+    // Products must be saved to database before categorization
+    if (!savedJobId) {
+      setLogs(prev => [...prev, `⚠ Please save the job first before categorizing products`]);
+      return;
+    }
+
     try {
-      // Here you would typically make API calls to categorize the selected items
-      // For now, we'll just show a success message
-      setLogs(prev => [...prev, `✔ Categorized ${selectedItems.length} items to category`]);
+      // Get product IDs from saved job
+      const response = await fetch(`/api/jobs/${savedJobId}/products`);
+      if (!response.ok) throw new Error('Failed to fetch product IDs');
+
+      const savedProducts = await response.json();
+      const productIds = selectedItems.map(index => savedProducts[parseInt(index)]?.id).filter(Boolean);
+
+      if (productIds.length === 0) {
+        throw new Error('No valid product IDs found');
+      }
+
+      // Batch categorize
+      const categorizeResponse = await fetch('/api/products/batch-categorize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productIds,
+          categoryId: batchCategoryId,
+        }),
+      });
+
+      if (!categorizeResponse.ok) {
+        throw new Error('Failed to categorize products');
+      }
+
+      const result = await categorizeResponse.json();
+      setLogs(prev => [...prev, `✔ ${result.message}`]);
       setSelectedItems([]); // Clear selection after categorization
+      setBatchCategoryId(''); // Reset category selection
     } catch (error: any) {
       setLogs(prev => [...prev, `✖ Failed to categorize items: ${error.message}`]);
     }
