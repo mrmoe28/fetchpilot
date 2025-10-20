@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { scrapingJobs, scrapedProducts, categories, scheduledScrapes } from '@/lib/db/schema'
+import { scrapingJobs, categories, scheduledScrapes } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
 // GET /api/user/export-data - Export all user data

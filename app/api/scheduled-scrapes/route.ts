@@ -18,7 +18,7 @@ const createScheduledScrapeSchema = z.object({
 })
 
 // Helper to calculate next run time from cron expression
-function calculateNextRun(cronExpression: string): Date {
+function calculateNextRun(_cronExpression: string): Date {
   // Simple implementation - always return 1 hour from now
   // In production, use a library like 'cron-parser' for accurate cron parsing
   const nextRun = new Date()

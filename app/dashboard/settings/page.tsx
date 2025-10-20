@@ -58,55 +58,58 @@ export default function SettingsPage() {
     }
   }
 
-  const handleDeleteData = async () {
-    if (!confirm('Are you sure you want to delete all your scraping data? This action cannot be undone. Your account will be preserved.')) {
-      return
+  const handleDeleteData = async () => {
+    const confirmed = window.confirm("Are you sure you want to delete all your scraping data? This action cannot be undone. Your account will be preserved.");
+    if (!confirmed) {
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
-      const response = await fetch('/api/user/delete-data', {
-        method: 'DELETE',
-      })
+      const response = await fetch("/api/user/delete-data", {
+        method: "DELETE",
+      });
 
-      if (!response.ok) throw new Error('Delete failed')
+      if (!response.ok) throw new Error("Delete failed");
 
-      alert('All scraping data has been deleted successfully.')
-      router.push('/dashboard')
+      alert("All scraping data has been deleted successfully.");
+      router.push("/dashboard");
     } catch (error) {
-      console.error('Failed to delete data:', error)
-      alert('Failed to delete data. Please try again.')
+      console.error("Failed to delete data:", error);
+      alert("Failed to delete data. Please try again.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleDeleteAccount = async () => {
-    if (!confirm('Are you sure you want to delete your account? This will permanently delete all your data and cannot be undone.')) {
-      return
+    const confirmed1 = window.confirm("Are you sure you want to delete your account? This will permanently delete all your data and cannot be undone.");
+    if (!confirmed1) {
+      return;
     }
 
-    if (!confirm('This is your final warning. Delete your account and all data permanently?')) {
-      return
+    const confirmed2 = window.confirm("This is your final warning. Delete your account and all data permanently?");
+    if (!confirmed2) {
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
-      const response = await fetch('/api/user/delete-account', {
-        method: 'DELETE',
-      })
+      const response = await fetch("/api/user/delete-account", {
+        method: "DELETE",
+      });
 
-      if (!response.ok) throw new Error('Delete failed')
+      if (!response.ok) throw new Error("Delete failed");
 
-      alert('Your account has been deleted.')
-      router.push('/auth/signin')
+      alert("Your account has been deleted.");
+      router.push("/auth/signin");
     } catch (error) {
-      console.error('Failed to delete account:', error)
-      alert('Failed to delete account. Please try again.')
+      console.error("Failed to delete account:", error);
+      alert("Failed to delete account. Please try again.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   if (status === 'loading') {
     return (
