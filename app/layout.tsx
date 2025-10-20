@@ -7,6 +7,7 @@ import { SessionProvider } from "@/components/session-provider"
 import { ThemeProvider } from "@/components/theme-provider"
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: {
     default: "FetchPilot - Autonomous Web Intelligence Agent",
     template: "%s | FetchPilot"

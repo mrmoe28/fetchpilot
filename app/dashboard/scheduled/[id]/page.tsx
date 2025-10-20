@@ -42,7 +42,7 @@ export default function EditScheduledScrapePage({ params }: { params: Promise<{ 
       setId(resolvedParams.id)
       fetchScheduledScrape(resolvedParams.id)
     })
-  }, [])
+  }, [params])
 
   const fetchScheduledScrape = async (scheduleId: string) => {
     try {
