@@ -8,7 +8,7 @@ import { Play, Loader2 } from "lucide-react";
 
 export default function ScraperForm({ onSubmit, loading }: { onSubmit: (d: { url: string; goal?: string }) => void; loading: boolean; }) {
   const [url, setUrl] = useState("");
-  const [goal, setGoal] = useState("Extract product cards and canonical links");
+  const [goal, setGoal] = useState("Extract product cards, prices, details, model numbers and canonical links");
 
   return (
     <div className="space-y-6">
