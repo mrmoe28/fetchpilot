@@ -237,14 +237,7 @@ function RecentProducts({ products }: { products: Awaited<ReturnType<typeof getR
                   )}
                   {product.categoryName && (
                     <div className="absolute top-2 left-2">
-                      <Badge 
-                        className="text-xs"
-                        style={{ 
-                          backgroundColor: product.categoryColor + '20',
-                          color: product.categoryColor,
-                          border: `1px solid ${product.categoryColor}40`
-                        }}
-                      >
+                      <Badge className="text-xs bg-white/90 text-slate-700 border border-slate-200">
                         {product.categoryName}
                       </Badge>
                     </div>
@@ -338,14 +331,7 @@ async function JobHistory({ userId }: { userId: string }) {
                     {new Date(job.createdAt).toLocaleDateString()}
                   </span>
                   {job.category && (
-                    <Badge 
-                      className="text-xs"
-                      style={{ 
-                        backgroundColor: job.category.color + '20',
-                        color: job.category.color,
-                        border: `1px solid ${job.category.color}40`
-                      }}
-                    >
+                    <Badge className="text-xs bg-blue-100 text-blue-700">
                       {job.category.name}
                     </Badge>
                   )}
