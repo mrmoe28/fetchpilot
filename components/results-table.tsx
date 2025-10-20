@@ -2,7 +2,21 @@ import { Table, THead, TRow, TH, TD } from "@/components/ui/table"
 import Image from "next/image"
 import { ExternalLink, CheckCircle, XCircle } from "lucide-react"
 
-export default function ResultsTable({ rows }: { rows: any[] }) {
+interface ResultsTableProps {
+  rows: any[];
+  selectedItems?: string[];
+  onSelectItem?: (index: string) => void;
+  onSelectAll?: (selected: boolean) => void;
+}
+
+export default function ResultsTable({ 
+  rows, 
+  selectedItems = [], 
+  onSelectItem, 
+  onSelectAll 
+}: ResultsTableProps) {
+  const allSelected = rows.length > 0 && selectedItems.length === rows.length;
+  const someSelected = selectedItems.length > 0 && selectedItems.length < rows.length;
   return (
     <div className="overflow-auto max-h-[600px]">
       {rows.length === 0 ? (
@@ -19,6 +33,20 @@ export default function ResultsTable({ rows }: { rows: any[] }) {
         <Table>
           <THead>
             <TRow className="bg-slate-50/50">
+              <TH className="font-semibold w-12">
+                {onSelectAll && (
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    ref={input => {
+                      if (input) input.indeterminate = someSelected;
+                    }}
+                    onChange={(e) => onSelectAll(e.target.checked)}
+                    className="w-4 h-4 text-sky-600 bg-white border-slate-300 rounded focus:ring-sky-500 focus:ring-2"
+                    title="Select all items"
+                  />
+                )}
+              </TH>
               <TH className="font-semibold">Image</TH>
               <TH className="font-semibold">Title</TH>
               <TH className="font-semibold">Price</TH>
@@ -29,6 +57,17 @@ export default function ResultsTable({ rows }: { rows: any[] }) {
           <tbody>
             {rows.map((r, i) => (
               <TRow key={i} className="hover:bg-sky-50/30 transition-colors animate-fade-in" style={{animationDelay: `${i * 0.05}s`}}>
+                <TD>
+                  {onSelectItem && (
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.includes(i.toString())}
+                      onChange={() => onSelectItem(i.toString())}
+                      className="w-4 h-4 text-sky-600 bg-white border-slate-300 rounded focus:ring-sky-500 focus:ring-2"
+                      aria-label={`Select ${r.title || 'product'}`}
+                    />
+                  )}
+                </TD>
                 <TD>
                   {r.image ? (
                     <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-100 shadow-sm">

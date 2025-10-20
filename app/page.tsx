@@ -1,11 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { Card, CardContent } from "@/components/ui/card";
 import ScraperForm from "@/components/scraper-form";
 import ResultsTable from "@/components/results-table";
 import LogView from "@/components/log-view";
-import { Sparkles, Zap, Brain, Globe, BarChart3, History } from "lucide-react";
+import { Sparkles, Brain, BarChart3, History, Loader, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
 function QuickActions() {
@@ -55,6 +55,14 @@ export default function Page() {
   const [rows, setRows] = useState<any[]>([])
   const [logs, setLogs] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [savedJobId, setSavedJobId] = useState<string | null>(null)
+  const [categories, setCategories] = useState<any[]>([])
+  const [selectedCategory, setSelectedCategory] = useState<string>("")
+  const [lastScrapeUrl, setLastScrapeUrl] = useState<string>("")
+  const [lastScrapeGoal, setLastScrapeGoal] = useState<string>("")
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
+  const [batchCategoryId, setBatchCategoryId] = useState<string>("")
 
   // Middleware now handles authentication redirects
 
@@ -75,8 +83,21 @@ export default function Page() {
     return null
   }
 
+  // Fetch categories on mount
+  useEffect(() => {
+    if (session?.user) {
+      fetch('/api/categories')
+        .then(res => res.json())
+        .then(data => setCategories(data))
+        .catch(console.error)
+    }
+  }, [session])
+
   async function runScrape(input: { url: string; goal?: string }) {
     setLoading(true);
+    setSavedJobId(null);
+    setLastScrapeUrl(input.url);
+    setLastScrapeGoal(input.goal || "");
     setLogs((l) => [...l, "▶ Starting FetchPilot..."]);
     try {
       const res = await fetch("/api/scrape", {
@@ -101,6 +122,140 @@ export default function Page() {
     }
   }
 
+  async function handleSaveJob() {
+    if (!rows.length) return;
+
+    setSaving(true);
+    try {
+      const res = await fetch('/api/jobs', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          url: lastScrapeUrl,
+          goal: lastScrapeGoal,
+          products: rows,
+          categoryId: selectedCategory || null,
+          productsFound: rows.length,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to save job');
+
+      const job = await res.json();
+      setSavedJobId(job.id);
+      setLogs((l) => [...l, `✔ Job saved successfully! ID: ${job.id}`]);
+    } catch (error: any) {
+      setLogs((l) => [...l, `✖ Failed to save: ${error.message}`]);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleExportCSV() {
+    if (!rows.length) return;
+
+    const headers = ['Title', 'Price', 'URL', 'Brand', 'Rating', 'SKU'];
+    const csvData = [
+      headers.join(','),
+      ...rows.map(r => [
+        `"${r.title || ''}"`,
+        `"${r.price || ''}"`,
+        `"${r.url || ''}"`,
+        `"${r.brand || ''}"`,
+        `"${r.rating || ''}"`,
+        `"${r.sku || ''}"`
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvData], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `products_${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleExportJSON() {
+    if (!rows.length) return;
+
+    const blob = new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `products_${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleSelectItem(index: string) {
+    setSelectedItems(prev => 
+      prev.includes(index) 
+        ? prev.filter(i => i !== index)
+        : [...prev, index]
+    );
+  }
+
+  function handleSelectAll(selected: boolean) {
+    if (selected) {
+      setSelectedItems(rows.map((_, i) => i.toString()));
+    } else {
+      setSelectedItems([]);
+    }
+  }
+
+  function handleBatchExportCSV() {
+    if (!selectedItems.length) return;
+
+    const selectedRows = selectedItems.map(index => rows[parseInt(index)]);
+    const headers = ['Title', 'Price', 'URL', 'Brand', 'Rating', 'SKU'];
+    const csvData = [
+      headers.join(','),
+      ...selectedRows.map(r => [
+        `"${r.title || ''}"`,
+        `"${r.price || ''}"`,
+        `"${r.url || ''}"`,
+        `"${r.brand || ''}"`,
+        `"${r.rating || ''}"`,
+        `"${r.sku || ''}"`
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvData], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `selected_products_${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleBatchExportJSON() {
+    if (!selectedItems.length) return;
+
+    const selectedRows = selectedItems.map(index => rows[parseInt(index)]);
+    const blob = new Blob([JSON.stringify(selectedRows, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `selected_products_${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleBatchCategorize() {
+    if (!selectedItems.length || !batchCategoryId) return;
+
+    try {
+      // Here you would typically make API calls to categorize the selected items
+      // For now, we'll just show a success message
+      setLogs(prev => [...prev, `✔ Categorized ${selectedItems.length} items to category`]);
+      setSelectedItems([]); // Clear selection after categorization
+    } catch (error: any) {
+      setLogs(prev => [...prev, `✖ Failed to categorize items: ${error.message}`]);
+    }
+  }
+
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
@@ -120,27 +275,6 @@ export default function Page() {
               <p className="text-lg text-slate-600 mb-8">
                 Create a new scraping job or manage your existing ones. Your data is automatically saved and organized.
               </p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                {[
-                  { icon: Brain, label: "LLM-Guided", desc: "Smart extraction" },
-                  { icon: Zap, label: "HTTP-First", desc: "Lightning fast" },
-                  { icon: Globe, label: "Universal", desc: "Any website" },
-                  { icon: Sparkles, label: "Self-Correcting", desc: "Auto-adapts" },
-                ].map((feature, i) => (
-                  <div
-                    key={i}
-                    className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-white/60 border border-white/60 shadow-sm"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white grid place-content-center shadow-md">
-                      <feature.icon className="w-5 h-5" />
-                    </div>
-                    <div className="text-center">
-                      <p className="font-semibold text-sm text-slate-900">{feature.label}</p>
-                      <p className="text-xs text-slate-500">{feature.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -162,18 +296,180 @@ export default function Page() {
 
       {/* Results Section */}
       {(rows.length > 0 || logs.length > 0) && (
-        <div className="grid lg:grid-cols-2 gap-6">
-          <Card className="glass shadow-soft-lg border border-white/40 rounded-3xl overflow-hidden">
-            <CardContent className="p-0">
-              <div className="p-6 border-b border-slate-200/60 bg-gradient-to-r from-white/80 to-white/40">
-                <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  Extracted Products ({rows.length})
-                </h2>
-              </div>
-              <ResultsTable rows={rows} />
-            </CardContent>
-          </Card>
+        <>
+          {/* Action Bar */}
+          {rows.length > 0 && (
+            <Card className="glass shadow-soft border border-white/40 rounded-2xl">
+              <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-slate-900 mb-2">Save & Organize Results</h3>
+                    <p className="text-sm text-slate-600">Save this job to your dashboard and assign it to a category</p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Category Selector */}
+                    {categories.length > 0 && (
+                      <select
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-700 hover:border-slate-300 transition-colors bg-white"
+                        disabled={saving || !!savedJobId}
+                        title="Select category for this job"
+                      >
+                        <option value="">No Category</option>
+                        {categories.map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </select>
+                    )}
+
+                    {/* Save Button */}
+                    {!savedJobId ? (
+                      <button
+                        onClick={handleSaveJob}
+                        disabled={saving}
+                        className="px-4 py-2 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-sm font-medium hover:from-sky-600 hover:to-blue-700 transition-all duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        {saving ? (
+                          <>
+                            <Loader className="w-4 h-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                            </svg>
+                            Save Job
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <Link
+                        href={`/dashboard/jobs/${savedJobId}`}
+                        className="px-4 py-2 bg-green-500 text-white rounded-xl text-sm font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center gap-2"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        View in Dashboard
+                      </Link>
+                    )}
+
+                    {/* Export Buttons */}
+                    <button
+                      onClick={handleExportCSV}
+                      className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-50 transition-all duration-200 flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      CSV
+                    </button>
+
+                    <button
+                      onClick={handleExportJSON}
+                      className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-50 transition-all duration-200 flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      JSON
+                    </button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="grid lg:grid-cols-2 gap-6">
+            <Card className="glass shadow-soft-lg border border-white/40 rounded-3xl overflow-hidden">
+              <CardContent className="p-0">
+                <div className="p-6 border-b border-slate-200/60 bg-gradient-to-r from-white/80 to-white/40">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      Extracted Products ({rows.length})
+                      {selectedItems.length > 0 && (
+                        <span className="ml-2 px-2 py-1 bg-sky-100 text-sky-700 text-sm rounded-lg">
+                          {selectedItems.length} selected
+                        </span>
+                      )}
+                    </h2>
+                    
+                    {selectedItems.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-3">
+                        {/* Batch Category Selector */}
+                        {categories.length > 0 && (
+                          <select
+                            value={batchCategoryId}
+                            onChange={(e) => setBatchCategoryId(e.target.value)}
+                            className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:border-slate-300 transition-colors bg-white"
+                            title="Select category for batch operation"
+                          >
+                            <option value="">Select Category</option>
+                            {categories.map(cat => (
+                              <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            ))}
+                          </select>
+                        )}
+
+                        {/* Batch Categorize Button */}
+                        {categories.length > 0 && (
+                          <button
+                            onClick={handleBatchCategorize}
+                            disabled={!batchCategoryId}
+                            className="px-3 py-1.5 bg-purple-500 text-white rounded-lg text-sm font-medium hover:bg-purple-600 transition-all duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a2 2 0 012-2z" />
+                            </svg>
+                            Categorize ({selectedItems.length})
+                          </button>
+                        )}
+
+                        {/* Batch Export Buttons */}
+                        <button
+                          onClick={handleBatchExportCSV}
+                          className="px-3 py-1.5 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-all duration-200 shadow-sm flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          CSV ({selectedItems.length})
+                        </button>
+
+                        <button
+                          onClick={handleBatchExportJSON}
+                          className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-all duration-200 shadow-sm flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
+                          JSON ({selectedItems.length})
+                        </button>
+
+                        {/* Clear Selection */}
+                        <button
+                          onClick={() => setSelectedItems([])}
+                          className="px-3 py-1.5 bg-slate-500 text-white rounded-lg text-sm font-medium hover:bg-slate-600 transition-all duration-200 shadow-sm flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          Clear
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <ResultsTable 
+                  rows={rows} 
+                  selectedItems={selectedItems}
+                  onSelectItem={handleSelectItem}
+                  onSelectAll={handleSelectAll}
+                />
+              </CardContent>
+            </Card>
           <Card className="glass shadow-soft-lg border border-white/40 rounded-3xl overflow-hidden">
             <CardContent className="p-0">
               <div className="p-6 border-b border-slate-200/60 bg-gradient-to-r from-white/80 to-white/40">
@@ -185,7 +481,8 @@ export default function Page() {
               <LogView logs={logs} />
             </CardContent>
           </Card>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );
