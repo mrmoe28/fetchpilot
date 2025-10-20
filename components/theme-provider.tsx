@@ -5,10 +5,7 @@ import { ReactNode } from "react"
 
 interface ThemeProviderProps {
   children: ReactNode
-  attribute?: string | string[]
-  defaultTheme?: string
-  enableSystem?: boolean
-  disableTransitionOnChange?: boolean
+  [key: string]: any
 }
 
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
