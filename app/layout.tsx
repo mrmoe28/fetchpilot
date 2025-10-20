@@ -4,6 +4,7 @@ import { ReactNode } from "react"
 import Header from "@/components/header"
 import { ToastProvider } from "@/lib/providers/toast-provider"
 import { SessionProvider } from "@/components/session-provider"
+import { ThemeProvider } from "@/components/theme-provider"
 
 export const metadata: Metadata = {
   title: {
@@ -29,14 +30,21 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className="text-foreground antialiased">
-        <SessionProvider>
-          <ToastProvider>
-            <Header />
-            <main className="max-w-7xl mx-auto px-6 py-12">{children}</main>
-          </ToastProvider>
-        </SessionProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange={false}
+        >
+          <SessionProvider>
+            <ToastProvider>
+              <Header />
+              <main className="max-w-7xl mx-auto px-6 py-12">{children}</main>
+            </ToastProvider>
+          </SessionProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

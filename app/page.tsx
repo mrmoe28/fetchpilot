@@ -59,7 +59,8 @@ export default function Page() {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      redirect('/auth/signin')
+      // Redirect to landing page instead of signin
+      window.location.href = '/landing'
     }
   }, [status])
 
