@@ -20,13 +20,18 @@ export default auth((req) => {
   ]
 
   // Check if current path is public
-  const isPublicRoute = publicRoutes.some(route => 
+  const isPublicRoute = publicRoutes.some(route =>
     nextUrl.pathname.startsWith(route)
   )
 
-  const isPublicApiRoute = publicApiRoutes.some(route => 
+  const isPublicApiRoute = publicApiRoutes.some(route =>
     nextUrl.pathname.startsWith(route)
   )
+
+  // Redirect logged-in users away from sign-in page to dashboard
+  if (isLoggedIn && nextUrl.pathname === '/auth/signin') {
+    return NextResponse.redirect(new URL('/dashboard', nextUrl.origin))
+  }
 
   // Allow public routes and API routes
   if (isPublicRoute || isPublicApiRoute) {

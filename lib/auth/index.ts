@@ -41,18 +41,29 @@ export const authConfig: NextAuthConfig = {
       return true
     },
     async redirect({ url, baseUrl }) {
-      // After successful sign-in, redirect to dashboard
+      // Handles redirects after authentication actions
+
+      // Always redirect to dashboard after successful sign-in
+      if (url.startsWith("/api/auth/callback")) {
+        return `${baseUrl}/dashboard`
+      }
+
+      // If redirect URL is root, go to dashboard
       if (url === baseUrl || url === `${baseUrl}/`) {
         return `${baseUrl}/dashboard`
       }
-      // Allow relative callback URLs
+
+      // Allow relative callback URLs (like /dashboard, /settings)
       if (url.startsWith("/")) {
         return `${baseUrl}${url}`
       }
+
       // Allow callback URLs on the same origin
       if (new URL(url).origin === baseUrl) {
         return url
       }
+
+      // Default fallback - go to dashboard
       return `${baseUrl}/dashboard`
     },
   },
