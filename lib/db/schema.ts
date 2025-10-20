@@ -8,6 +8,7 @@ export const users = pgTable('users', {
   email: varchar('email', { length: 255 }).notNull().unique(),
   emailVerified: timestamp('email_verified'),
   image: text('image'),
+  password: varchar('password', { length: 255 }), // For email/password auth
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
@@ -43,6 +44,18 @@ export const verificationTokens = pgTable('verification_tokens', {
   expires: timestamp('expires').notNull(),
 }, (table) => ({
   compositePk: index('verification_tokens_pk').on(table.identifier, table.token),
+}))
+
+// Password reset tokens table
+export const passwordResetTokens = pgTable('password_reset_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  email: varchar('email', { length: 255 }).notNull(),
+  token: varchar('token', { length: 255 }).notNull().unique(),
+  expires: timestamp('expires').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  emailIdx: index('password_reset_tokens_email_idx').on(table.email),
+  tokenIdx: index('password_reset_tokens_token_idx').on(table.token),
 }))
 
 // Categories table
@@ -340,6 +353,9 @@ export type NewScheduledScrape = typeof scheduledScrapes.$inferInsert
 
 export type ScrapeRun = typeof scrapeRuns.$inferSelect
 export type NewScrapeRun = typeof scrapeRuns.$inferInsert
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect
+export type NewPasswordResetToken = typeof passwordResetTokens.$inferInsert
 
 // Enhanced types with relations
 export type ScrapingJobWithRelations = ScrapingJob & {

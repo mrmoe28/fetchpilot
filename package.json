@@ -17,6 +17,8 @@
   "dependencies": {
     "@auth/drizzle-adapter": "^1.7.3",
     "@neondatabase/serverless": "^0.10.1",
+    "@types/bcryptjs": "^2.4.6",
+    "bcryptjs": "^3.0.2",
     "cheerio": "^1.0.0-rc.12",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
