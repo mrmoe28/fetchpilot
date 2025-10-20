@@ -136,7 +136,7 @@ export const buttonHover = {
   scale: 1.05,
   transition: {
     duration: 0.2,
-    ease: "easeOut",
+    ease: [0.25, 0.25, 0, 1] as const,
   },
 }
 
