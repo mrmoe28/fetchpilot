@@ -152,6 +152,7 @@ export const jobTags = pgTable('job_tags', {
 export const scrapedProducts = pgTable('scraped_products', {
   id: uuid('id').primaryKey().defaultRandom(),
   jobId: uuid('job_id').notNull().references(() => scrapingJobs.id, { onDelete: 'cascade' }),
+  categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'set null' }),
   url: text('url').notNull(),
   title: text('title').notNull(),
   price: varchar('price', { length: 255 }),
@@ -159,11 +160,16 @@ export const scrapedProducts = pgTable('scraped_products', {
   inStock: boolean('in_stock'),
   sku: varchar('sku', { length: 255 }),
   currency: varchar('currency', { length: 10 }),
+  description: text('description'),
+  brand: varchar('brand', { length: 255 }),
+  rating: varchar('rating', { length: 50 }), // e.g., "4.5", "4/5", "★★★★☆"
+  reviewCount: integer('review_count'),
   breadcrumbs: json('breadcrumbs').$type<string[]>(),
   extra: json('extra'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => ({
   jobIdIdx: index('scraped_products_job_id_idx').on(table.jobId),
+  categoryIdIdx: index('scraped_products_category_id_idx').on(table.categoryId),
   urlIdx: index('scraped_products_url_idx').on(table.url),
 }))
 
@@ -253,6 +259,7 @@ export const categoriesRelations = relations(categories, ({ one, many }) => ({
     references: [users.id],
   }),
   scrapingJobs: many(scrapingJobs),
+  scrapedProducts: many(scrapedProducts),
 }))
 
 export const tagsRelations = relations(tags, ({ one, many }) => ({
@@ -303,6 +310,10 @@ export const scrapedProductsRelations = relations(scrapedProducts, ({ one }) => 
   job: one(scrapingJobs, {
     fields: [scrapedProducts.jobId],
     references: [scrapingJobs.id],
+  }),
+  category: one(categories, {
+    fields: [scrapedProducts.categoryId],
+    references: [categories.id],
   }),
 }))
 

@@ -50,6 +50,9 @@ export default function ResultsTable({
               <TH className="font-semibold">Image</TH>
               <TH className="font-semibold">Title</TH>
               <TH className="font-semibold">Price</TH>
+              <TH className="font-semibold">Brand</TH>
+              <TH className="font-semibold">Rating</TH>
+              <TH className="font-semibold">Category</TH>
               <TH className="font-semibold">Stock</TH>
               <TH className="font-semibold">URL</TH>
             </TRow>
@@ -95,6 +98,43 @@ export default function ResultsTable({
                   {r.price ? (
                     <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-green-50 text-green-700 font-semibold text-sm">
                       {r.price}
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">-</span>
+                  )}
+                </TD>
+                <TD>
+                  {(r as any).brand ? (
+                    <span className="text-sm text-slate-700 font-medium">
+                      {(r as any).brand}
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">-</span>
+                  )}
+                </TD>
+                <TD>
+                  {(r as any).rating ? (
+                    <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 text-amber-700 text-sm">
+                      <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20">
+                        <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/>
+                      </svg>
+                      {(r as any).rating}
+                    </div>
+                  ) : (
+                    <span className="text-slate-400">-</span>
+                  )}
+                </TD>
+                <TD>
+                  {(r as any).category?.name ? (
+                    <span 
+                      className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium text-white"
+                      style={{ backgroundColor: (r as any).category.color }}
+                    >
+                      {(r as any).category.name}
+                    </span>
+                  ) : (r as any).categoryId ? (
+                    <span className="inline-flex items-center px-2 py-1 rounded-lg bg-slate-100 text-slate-600 text-xs font-medium">
+                      Categorized
                     </span>
                   ) : (
                     <span className="text-slate-400">-</span>

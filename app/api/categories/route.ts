@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { categories, type NewCategory } from '@/lib/db/schema'
-import { eq, and, desc } from 'drizzle-orm'
+import { categories, scrapedProducts, type NewCategory } from '@/lib/db/schema'
+import { eq, and, desc, count } from 'drizzle-orm'
 import { z } from 'zod'
 
 // Validation schemas
@@ -46,9 +46,14 @@ export async function GET(req: NextRequest) {
         icon: categories.icon,
         createdAt: categories.createdAt,
         updatedAt: categories.updatedAt,
+        _count: {
+          scrapedProducts: count(scrapedProducts.id)
+        }
       })
       .from(categories)
+      .leftJoin(scrapedProducts, eq(categories.id, scrapedProducts.categoryId))
       .where(eq(categories.userId, session.user.id))
+      .groupBy(categories.id)
       .orderBy(desc(categories.updatedAt))
 
     resultCount = userCategories.length

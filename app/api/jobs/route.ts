@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     const jobId = nanoid()
     const now = new Date()
 
-    const [job] = await db
+    await db
       .insert(scrapingJobs)
       .values({
         id: jobId,
@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
     const productRecords = products.map((product: any) => ({
       id: nanoid(),
       jobId,
+      categoryId: product.categoryId || null,
       url: product.url,
       title: product.title,
       price: product.price || null,
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     const session = await auth()
     if (!session?.user?.id) {

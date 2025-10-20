@@ -1,9 +1,11 @@
 import { HttpFetcher, ManagedBrowser, extractProductsHTML, BrowserClient } from "./tools";
 import { Product, TProduct, TPageObservation } from "./schemas";
 import { askClaudeForDecision } from "./brain";
+import { classifyProduct } from "./categorizer";
 
 type Cfg = {
   anthropicKey: string;
+  userId?: string;
   browser?: BrowserClient;
   maxTotalPages?: number;
   logs?: string[];
@@ -286,6 +288,58 @@ export async function scrapeProducts(startUrl: string, goal: string, cfg: Cfg) {
   
   cfg.logger?.(summary);
   logs.push(`Summary: ${JSON.stringify(summary)}`);
+  
+  // Enrich products with categorization and metadata if userId provided
+  if (cfg.userId && results.length > 0) {
+    logs.push(`Starting product categorization for ${results.length} products...`);
+    
+    const enrichedResults: TProduct[] = [];
+    
+    for (let i = 0; i < results.length; i++) {
+      const product = results[i];
+      try {
+        // Classify product and get category
+        const classification = await classifyProduct({
+          product,
+          userId: cfg.userId,
+          goal,
+          anthropicKey: cfg.anthropicKey,
+          llmProvider: cfg.llmProvider,
+          ollamaBaseUrl: cfg.ollamaBaseUrl,
+          ollamaModel: cfg.ollamaModel,
+          runId: cfg.runId,
+          logger: cfg.logger
+        });
+
+        // Enrich product with metadata from extra field and add categoryId
+        const enrichedProduct: TProduct = {
+          ...product,
+          categoryId: classification.categoryId,
+          description: product.extra?.description || product.description,
+          brand: product.extra?.brand || product.brand,
+          rating: product.extra?.rating || product.rating,
+          reviewCount: product.extra?.reviewCount || product.reviewCount
+        };
+
+        enrichedResults.push(enrichedProduct);
+        
+        if (classification.createdCategory) {
+          logs.push(`✨ Created new category: "${classification.categoryName}" for product: ${product.title?.substring(0, 40)}...`);
+        } else {
+          logs.push(`📂 Categorized "${product.title?.substring(0, 40)}..." as "${classification.categoryName}"`);
+        }
+
+      } catch (error) {
+        // If categorization fails, keep original product
+        logs.push(`⚠️ Failed to categorize product "${product.title?.substring(0, 40)}...": ${error}`);
+        enrichedResults.push(product);
+      }
+    }
+    
+    logs.push(`✅ Completed categorization for ${enrichedResults.length}/${results.length} products`);
+    return enrichedResults;
+  }
+  
   return results;
 }
 

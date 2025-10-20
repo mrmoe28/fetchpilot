@@ -69,9 +69,15 @@ export async function POST(req: NextRequest) {
     const logs: string[] = []
     const products = await scrapeProducts(url, goal, {
       anthropicKey: process.env.ANTHROPIC_API_KEY || "",
+      userId: session?.user?.id, // Pass userId for categorization
       browser: undefined,
       maxTotalPages: config?.maxTotalPages || 12,
       logs,
+      runId: jobId,
+      logger: (event) => {
+        // Optional: Log events for debugging
+        console.log(`[${jobId}] ${event.stage}:`, event)
+      }
     })
 
     const duration = Date.now() - startTime
@@ -82,6 +88,7 @@ export async function POST(req: NextRequest) {
         await db.insert(scrapedProducts).values(
           products.map(p => ({
             jobId,
+            categoryId: (p as any).categoryId || null,
             url: p.url,
             title: p.title,
             price: p.price,
@@ -89,6 +96,10 @@ export async function POST(req: NextRequest) {
             inStock: p.inStock,
             sku: p.sku,
             currency: p.currency,
+            description: (p as any).description || null,
+            brand: (p as any).brand || null,
+            rating: (p as any).rating || null,
+            reviewCount: (p as any).reviewCount || null,
             breadcrumbs: p.breadcrumbs,
             extra: p.extra,
           }))

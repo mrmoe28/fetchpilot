@@ -15,6 +15,13 @@
       "when": 1760967909575,
       "tag": "0001_secret_lorna_dane",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1760975534968,
+      "tag": "0002_square_white_tiger",
+      "breakpoints": true
     }
   ]
 }

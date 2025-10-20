@@ -12,6 +12,7 @@ export const Product = z.object({
   brand: z.string().optional(), // Product brand/manufacturer
   rating: z.string().optional(), // Product rating if available
   reviewCount: z.string().optional(), // Number of reviews
+  categoryId: z.string().optional(), // Auto-assigned category ID
   breadcrumbs: z.array(z.string()).optional(),
   extra: z.record(z.any()).optional(),
 });
