@@ -4,62 +4,51 @@ import { NextResponse } from "next/server"
 export default auth((req) => {
   const { nextUrl } = req
   const isLoggedIn = !!req.auth
+  const { pathname } = nextUrl
 
-  // Public routes that don't require authentication
-  const publicRoutes = [
+  console.log(`[MIDDLEWARE] ${pathname} - Authenticated: ${isLoggedIn}`)
+
+  // 1. Allow all API routes (they handle their own auth if needed)
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next()
+  }
+
+  // 2. Public pages that don't require authentication
+  const publicPages = [
     '/auth/signin',
-    '/auth/error',
+    '/auth/error', 
     '/privacy',
     '/terms',
     '/landing'
   ]
 
-  // API routes that allow anonymous access
-  const publicApiRoutes = [
-    '/api/auth',
-    '/api/v1',
-    '/api/health',
-    '/api/debug'
-  ]
-
-  // Check if current path is public
-  const isPublicRoute = publicRoutes.some(route =>
-    nextUrl.pathname.startsWith(route)
-  )
-
-  const isPublicApiRoute = publicApiRoutes.some(route =>
-    nextUrl.pathname.startsWith(route)
-  )
-
-  // Redirect logged-in users away from sign-in page to dashboard
-  if (isLoggedIn && nextUrl.pathname === '/auth/signin') {
-    return NextResponse.redirect(new URL('/dashboard', nextUrl.origin))
-  }
-
-  // Allow public routes and API routes
-  if (isPublicRoute || isPublicApiRoute) {
+  if (publicPages.includes(pathname)) {
+    // Redirect logged-in users from sign-in page to dashboard
+    if (isLoggedIn && pathname === '/auth/signin') {
+      return NextResponse.redirect(new URL('/dashboard', nextUrl.origin))
+    }
     return NextResponse.next()
   }
 
-  // Redirect unauthenticated users to sign-in page
+  // 3. Protected pages require authentication
   if (!isLoggedIn) {
-    const callbackUrl = nextUrl.pathname + nextUrl.search
-    const signInUrl = new URL('/auth/signin', nextUrl.origin)
-    signInUrl.searchParams.set('callbackUrl', callbackUrl)
+    const callbackUrl = encodeURIComponent(pathname + nextUrl.search)
+    const signInUrl = new URL(`/auth/signin?callbackUrl=${callbackUrl}`, nextUrl.origin)
     return NextResponse.redirect(signInUrl)
   }
 
+  // 4. User is authenticated, allow access
   return NextResponse.next()
 })
 
 export const config = {
   matcher: [
     /*
-     * Match all request paths except:
+     * Match all request paths except for:
      * - _next/static (static files)
-     * - _next/image (image optimization files)
+     * - _next/image (image optimization files) 
      * - favicon.ico (favicon file)
-     * - public files (public folder)
+     * - public folder files (.svg, .png, etc.)
      */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
