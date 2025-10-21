@@ -10,6 +10,11 @@ export interface SearchConfig {
   filterNonProducts: boolean
 }
 
+// Check if running on Vercel production
+function isVercelProduction() {
+  return process.env.VERCEL_ENV === 'production'
+}
+
 export interface SearchProgress {
   stage: 'search_engines' | 'direct_sites' | 'product_detection' | 'completed'
   completed: number
@@ -40,6 +45,16 @@ export async function orchestrateSmartSearch(
   config: SearchConfig,
   onProgress?: (update: SearchProgress) => void | Promise<void>
 ): Promise<EnrichedSearchResult[]> {
+  // Prevent running on Vercel production (Playwright not compatible with serverless)
+  if (isVercelProduction()) {
+    throw new Error(
+      'Smart search is not available in production on Vercel. ' +
+      'Playwright requires a long-running server environment. ' +
+      'Please test locally or deploy to a worker service (Railway, Render). ' +
+      'See SMART_SEARCH_DEPLOYMENT.md for production deployment options.'
+    )
+  }
+
   const browser = await chromium.launch({
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
