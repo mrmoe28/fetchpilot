@@ -84,6 +84,13 @@ export async function POST(req: NextRequest) {
       console.log('Category column already exists in scraped_products table')
     }
 
+    // Fix varchar(255) constraints that cause "value too long" errors
+    console.log('Updating column types to support longer values...')
+    await db.execute(sql`ALTER TABLE "scraped_products" ALTER COLUMN "price" TYPE text`)
+    await db.execute(sql`ALTER TABLE "scraped_products" ALTER COLUMN "sku" TYPE text`)
+    await db.execute(sql`ALTER TABLE "scraped_products" ALTER COLUMN "brand" TYPE text`)
+    console.log('Column types updated successfully')
+
     return NextResponse.json({
       message: 'Migration completed successfully',
       timestamp: new Date().toISOString()
