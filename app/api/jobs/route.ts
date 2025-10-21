@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { scrapingJobs, scrapedProducts } from '@/lib/db/schema'
-import { nanoid } from 'nanoid'
+import { randomUUID } from 'crypto'
 
 export async function POST(req: NextRequest) {
   try {
     const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    // Allow anonymous job saving for better UX
+    // Jobs will be saved without userId for anonymous users
 
     const body = await req.json()
     const { url, goal, products, categoryId, productsFound } = body
@@ -22,14 +21,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Create scraping job
-    const jobId = nanoid()
+    const jobId = randomUUID()
     const now = new Date()
 
     await db
       .insert(scrapingJobs)
       .values({
         id: jobId,
-        userId: session.user.id,
+        userId: session?.user?.id || null, // Allow null for anonymous users
         url,
         goal: goal || null,
         status: 'completed',
@@ -43,7 +42,7 @@ export async function POST(req: NextRequest) {
 
     // Save all products
     const productRecords = products.map((product: any) => ({
-      id: nanoid(),
+      id: randomUUID(),
       jobId,
       categoryId: product.categoryId || null,
       url: product.url,
@@ -71,7 +70,10 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Failed to save job:', error)
     return NextResponse.json(
-      { error: 'Failed to save job' },
+      { 
+        error: 'Failed to save job',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }
