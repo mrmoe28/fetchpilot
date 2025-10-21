@@ -123,7 +123,7 @@ export default function Page() {
   }
 
   async function handleSaveJob() {
-    if (!rows.length) return;
+    if (!rows.length) return false;
 
     setSaving(true);
     try {
@@ -144,8 +144,10 @@ export default function Page() {
       const job = await res.json();
       setSavedJobId(job.id);
       setLogs((l) => [...l, `✔ Job saved successfully! ID: ${job.id}`]);
+      return job.id;
     } catch (error: any) {
       setLogs((l) => [...l, `✖ Failed to save: ${error.message}`]);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -247,14 +249,25 @@ export default function Page() {
     if (!selectedItems.length || !batchCategoryId) return;
 
     // Products must be saved to database before categorization
-    if (!savedJobId) {
+    let currentJobId = savedJobId;
+    if (!currentJobId) {
       setLogs(prev => [...prev, `⚠ Please save the job first before categorizing products`]);
-      return;
+      // Optionally auto-save if user attempts to categorize
+      if (rows.length > 0 && !saving) {
+        setLogs(prev => [...prev, `ℹ Auto-saving job to enable categorization...`]);
+        currentJobId = await handleSaveJob();
+        if (!currentJobId) {
+          setLogs(prev => [...prev, `✖ Could not save job, categorization cancelled`]);
+          return;
+        }
+      } else {
+        return;
+      }
     }
 
     try {
       // Get product IDs from saved job
-      const response = await fetch(`/api/jobs/${savedJobId}/products`);
+      const response = await fetch(`/api/jobs/${currentJobId}/products`);
       if (!response.ok) throw new Error('Failed to fetch product IDs');
 
       const savedProducts = await response.json();
@@ -448,8 +461,15 @@ export default function Page() {
                         {categories.length > 0 && (
                           <button
                             onClick={handleBatchCategorize}
-                            disabled={!batchCategoryId}
+                            disabled={!batchCategoryId || !savedJobId}
                             className="px-3 py-1.5 bg-purple-500 text-white rounded-lg text-sm font-medium hover:bg-purple-600 transition-all duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            title={
+                              !savedJobId 
+                                ? "Please save the job first before categorizing" 
+                                : !batchCategoryId 
+                                ? "Please select a category first" 
+                                : "Categorize selected products"
+                            }
                           >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a2 2 0 012-2z" />
