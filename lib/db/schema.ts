@@ -227,6 +227,69 @@ export const scrapeRuns = pgTable('scrape_runs', {
   totalProductsIdx: index('scrape_runs_total_products_idx').on(table.totalProducts),
 }))
 
+// Smart search queries table
+export const smartSearchQueries = pgTable('smart_search_queries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  query: text('query').notNull(),
+  status: varchar('status', { length: 50 }).default('pending'), // pending, searching, completed, failed
+  sourcesFound: integer('sources_found').default(0),
+  productPagesFound: integer('product_pages_found').default(0),
+  startedAt: timestamp('started_at'),
+  completedAt: timestamp('completed_at'),
+  error: text('error'),
+  config: json('config').$type<{
+    minSources?: number
+    searchEngines?: string[]
+    directSites?: string[]
+    filterNonProducts?: boolean
+  }>(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index('smart_search_queries_user_id_idx').on(table.userId),
+  statusIdx: index('smart_search_queries_status_idx').on(table.status),
+  createdAtIdx: index('smart_search_queries_created_at_idx').on(table.createdAt),
+}))
+
+// Search sources table - track domains and URLs found
+export const searchSources = pgTable('search_sources', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  searchQueryId: uuid('search_query_id').notNull().references(() => smartSearchQueries.id, { onDelete: 'cascade' }),
+  url: text('url').notNull(),
+  domain: varchar('domain', { length: 255 }).notNull(),
+  title: text('title'),
+  snippet: text('snippet'),
+  isProductPage: boolean('is_product_page').default(false),
+  productScore: integer('product_score'),
+  lastScrapedAt: timestamp('last_scraped_at'),
+  scrapingJobId: uuid('scraping_job_id').references(() => scrapingJobs.id, { onDelete: 'set null' }),
+  metadata: json('metadata').$type<{
+    hasPrice?: boolean
+    hasAddToCart?: boolean
+    hasProductImages?: boolean
+    hasStructuredData?: boolean
+    schemaType?: string
+  }>(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  searchQueryIdIdx: index('search_sources_query_id_idx').on(table.searchQueryId),
+  domainIdx: index('search_sources_domain_idx').on(table.domain),
+  urlIdx: index('search_sources_url_idx').on(table.url),
+  isProductPageIdx: index('search_sources_is_product_page_idx').on(table.isProductPage),
+}))
+
+// Search history - quick lookup for avoiding duplicate searches
+export const searchHistory = pgTable('search_history', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  domain: varchar('domain', { length: 255 }).notNull(),
+  lastSearchedAt: timestamp('last_searched_at').defaultNow().notNull(),
+  searchCount: integer('search_count').default(1),
+}, (table) => ({
+  userIdDomainIdx: index('search_history_user_domain_idx').on(table.userId, table.domain),
+  lastSearchedIdx: index('search_history_last_searched_idx').on(table.lastSearchedAt),
+}))
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
@@ -237,6 +300,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   tags: many(tags),
   siteProfiles: many(siteProfiles),
   scrapeRuns: many(scrapeRuns),
+  smartSearchQueries: many(smartSearchQueries),
+  searchHistory: many(searchHistory),
 }))
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
@@ -331,6 +396,32 @@ export const scrapeRunsRelations = relations(scrapeRuns, ({ one }) => ({
   }),
 }))
 
+export const smartSearchQueriesRelations = relations(smartSearchQueries, ({ one, many }) => ({
+  user: one(users, {
+    fields: [smartSearchQueries.userId],
+    references: [users.id],
+  }),
+  sources: many(searchSources),
+}))
+
+export const searchSourcesRelations = relations(searchSources, ({ one }) => ({
+  searchQuery: one(smartSearchQueries, {
+    fields: [searchSources.searchQueryId],
+    references: [smartSearchQueries.id],
+  }),
+  scrapingJob: one(scrapingJobs, {
+    fields: [searchSources.scrapingJobId],
+    references: [scrapingJobs.id],
+  }),
+}))
+
+export const searchHistoryRelations = relations(searchHistory, ({ one }) => ({
+  user: one(users, {
+    fields: [searchHistory.userId],
+    references: [users.id],
+  }),
+}))
+
 // Types
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
@@ -368,6 +459,15 @@ export type NewScrapeRun = typeof scrapeRuns.$inferInsert
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect
 export type NewPasswordResetToken = typeof passwordResetTokens.$inferInsert
 
+export type SmartSearchQuery = typeof smartSearchQueries.$inferSelect
+export type NewSmartSearchQuery = typeof smartSearchQueries.$inferInsert
+
+export type SearchSource = typeof searchSources.$inferSelect
+export type NewSearchSource = typeof searchSources.$inferInsert
+
+export type SearchHistory = typeof searchHistory.$inferSelect
+export type NewSearchHistory = typeof searchHistory.$inferInsert
+
 // Enhanced types with relations
 export type ScrapingJobWithRelations = ScrapingJob & {
   category?: Category
@@ -393,4 +493,8 @@ export type SiteProfileWithStats = SiteProfile & {
   _count: {
     scrapingJobs: number
   }
+}
+
+export type SmartSearchQueryWithSources = SmartSearchQuery & {
+  sources: SearchSource[]
 }

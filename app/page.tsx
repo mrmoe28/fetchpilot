@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import ScraperForm from "@/components/scraper-form";
 import ResultsTable from "@/components/results-table";
 import LogView from "@/components/log-view";
+import { SmartSearchInput } from "@/components/smart-search/search-input";
 import { Sparkles, Brain, BarChart3, History, Loader, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
@@ -326,6 +327,13 @@ export default function Page() {
 
       {/* Quick Actions */}
       <QuickActions />
+
+      {/* Smart Search */}
+      <Card className="glass shadow-soft-lg border border-white/40 rounded-3xl card-hover">
+        <CardContent className="p-6 md:p-8">
+          <SmartSearchInput minSources={20} />
+        </CardContent>
+      </Card>
 
       {/* Scraper Form */}
       <Card className="glass shadow-soft-lg border border-white/40 rounded-3xl card-hover">
