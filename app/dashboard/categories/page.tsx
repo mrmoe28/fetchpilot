@@ -53,30 +53,38 @@ function CategoriesContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const selectedCategoryId = searchParams.get('categoryId')
+  const showUncategorized = searchParams.get('view') === 'uncategorized'
   
   const [categories, setCategories] = useState<Category[]>([])
   const [products, setProducts] = useState<Product[]>([])
+  const [uncategorizedProducts, setUncategorizedProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [productsLoading, setProductsLoading] = useState(false)
+  const [uncategorizedLoading, setUncategorizedLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<'name' | 'count' | 'recent'>('name')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [selectedItems, setSelectedItems] = useState<string[]>([])
+  const [selectedCategoryForBatch, setSelectedCategoryForBatch] = useState('')
+  const [batchCategorizing, setBatchCategorizing] = useState(false)
 
-  // Fetch categories
+  // Fetch categories and uncategorized products
   useEffect(() => {
     fetchCategories()
+    fetchUncategorizedProducts()
   }, [])
 
-  // Fetch products when category is selected
+  // Fetch products when category is selected or showing uncategorized
   useEffect(() => {
     if (selectedCategoryId) {
       fetchCategoryProducts(selectedCategoryId)
+    } else if (showUncategorized) {
+      fetchUncategorizedProducts()
     } else {
       setProducts([])
     }
-  }, [selectedCategoryId])
+  }, [selectedCategoryId, showUncategorized])
 
   const fetchCategories = async () => {
     try {
@@ -106,6 +114,56 @@ function CategoriesContent() {
       setProducts([])
     } finally {
       setProductsLoading(false)
+    }
+  }
+
+  const fetchUncategorizedProducts = async () => {
+    try {
+      setUncategorizedLoading(true)
+      const res = await fetch('/api/products/uncategorized')
+      if (!res.ok) throw new Error('Failed to fetch uncategorized products')
+      
+      const data = await res.json()
+      setUncategorizedProducts(data)
+      if (showUncategorized) {
+        setProducts(data)
+      }
+    } catch (error) {
+      console.error('Error fetching uncategorized products:', error)
+      setUncategorizedProducts([])
+    } finally {
+      setUncategorizedLoading(false)
+    }
+  }
+
+  const handleBatchCategorize = async () => {
+    if (!selectedCategoryForBatch || selectedItems.length === 0) return
+    
+    try {
+      setBatchCategorizing(true)
+      const productIds = selectedItems.map(index => products[parseInt(index)].id)
+      
+      const res = await fetch('/api/products/batch-categorize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productIds,
+          categoryId: selectedCategoryForBatch
+        })
+      })
+      
+      if (!res.ok) throw new Error('Failed to batch categorize')
+      
+      // Refresh data
+      await fetchUncategorizedProducts()
+      await fetchCategories()
+      setSelectedItems([])
+      setSelectedCategoryForBatch('')
+    } catch (error) {
+      console.error('Error batch categorizing:', error)
+      alert('Failed to categorize products')
+    } finally {
+      setBatchCategorizing(false)
     }
   }
 
@@ -331,7 +389,119 @@ function CategoriesContent() {
               ))}
             </div>
           )}
+
+          {/* Uncategorized Products Alert */}
+          {uncategorizedProducts.length > 0 && (
+            <Card className="glass shadow-soft border border-amber-200/60 rounded-2xl bg-amber-50/30">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Package className="w-5 h-5 text-amber-600" />
+                      <h3 className="font-semibold text-amber-900">
+                        {uncategorizedProducts.length} Uncategorized {uncategorizedProducts.length === 1 ? 'Product' : 'Products'}
+                      </h3>
+                    </div>
+                    <p className="text-sm text-amber-700">
+                      You have products that haven't been assigned to categories yet. Click below to view and categorize them.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => router.push('/dashboard/categories?view=uncategorized')}
+                    className="bg-amber-600 hover:bg-amber-700 text-white flex-shrink-0"
+                  >
+                    View & Categorize
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </>
+      )}
+
+      {/* Uncategorized Products View */}
+      {showUncategorized && (
+        <Card className="glass shadow-soft-lg border border-white/40 rounded-3xl overflow-hidden">
+          <CardContent className="p-0">
+            <div className="p-6 border-b border-slate-200/60 bg-gradient-to-r from-white/80 to-white/40">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-slate-500 text-white grid place-content-center shadow-md">
+                    <Package className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">Uncategorized Products</h2>
+                    <p className="text-slate-600">Products that need to be assigned to categories</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {selectedItems.length > 0 && (
+                    <>
+                      <select
+                        value={selectedCategoryForBatch}
+                        onChange={(e) => setSelectedCategoryForBatch(e.target.value)}
+                        className="px-4 py-2 border border-slate-300 rounded-xl bg-white text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                      >
+                        <option value="">Select category...</option>
+                        {categories.map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </select>
+                      <Button
+                        onClick={handleBatchCategorize}
+                        disabled={!selectedCategoryForBatch || batchCategorizing}
+                        className="bg-sky-600 hover:bg-sky-700 text-white"
+                      >
+                        {batchCategorizing ? 'Categorizing...' : `Categorize ${selectedItems.length}`}
+                      </Button>
+                    </>
+                  )}
+                  <Button
+                    onClick={() => router.push('/dashboard/categories')}
+                    variant="outline"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
+            {uncategorizedLoading ? (
+              <div className="p-12 text-center">
+                <div className="w-8 h-8 border-2 border-sky-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-slate-600">Loading products...</p>
+              </div>
+            ) : products.length === 0 ? (
+              <div className="p-12 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-slate-100 grid place-content-center mx-auto mb-4">
+                  <Package className="w-8 h-8 text-slate-400" />
+                </div>
+                <p className="text-slate-600">All products have been categorized!</p>
+                <Button
+                  onClick={() => router.push('/dashboard/categories')}
+                  className="mt-4"
+                >
+                  View Categories
+                </Button>
+              </div>
+            ) : (
+              <ResultsTable 
+                rows={products.map(p => ({
+                  ...p,
+                  title: p.title || 'Untitled',
+                  price: p.price,
+                  image: p.image,
+                  url: p.url || '',
+                  inStock: p.inStock
+                }))}
+                selectedItems={selectedItems}
+                onSelectItem={handleSelectItem}
+                onSelectAll={handleSelectAll}
+              />
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Products View */}
