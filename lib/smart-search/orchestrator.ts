@@ -45,20 +45,29 @@ export async function orchestrateSmartSearch(
   config: SearchConfig,
   onProgress?: (update: SearchProgress) => void | Promise<void>
 ): Promise<EnrichedSearchResult[]> {
-  // Prevent running on Vercel production (Playwright not compatible with serverless)
+  // Use Browserless.io for production, local chromium for development
+  let browser: Browser
+  
   if (isVercelProduction()) {
-    throw new Error(
-      'Smart search is not available in production on Vercel. ' +
-      'Playwright requires a long-running server environment. ' +
-      'Please test locally or deploy to a worker service (Railway, Render). ' +
-      'See SMART_SEARCH_DEPLOYMENT.md for production deployment options.'
-    )
+    // Use Browserless.io for production deployment
+    if (!process.env.BROWSERLESS_TOKEN) {
+      throw new Error(
+        'Smart search requires BROWSERLESS_TOKEN environment variable in production. ' +
+        'Please add your Browserless.io token to Vercel environment variables. ' +
+        'See SMART_SEARCH_DEPLOYMENT.md for setup instructions.'
+      )
+    }
+    
+    browser = await chromium.connect({
+      wsEndpoint: `wss://chrome.browserless.io?token=${process.env.BROWSERLESS_TOKEN}`
+    })
+  } else {
+    // Use local chromium for development
+    browser = await chromium.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    })
   }
-
-  const browser = await chromium.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  })
 
   const allResults: EnrichedSearchResult[] = []
   const seenUrls = new Set<string>()
