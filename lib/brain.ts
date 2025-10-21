@@ -326,20 +326,20 @@ IMPORTANT: Base selectors on the ACTUAL HTML provided, not generic patterns. If 
     // Smarter fallback based on observations
     const hasJsonLd = obs.domSignals?.hasJsonLd;
     const fallbackDecision = {
-      rationale: `Fallback strategy: ${hasJsonLd ? 'Using JSON-LD extraction' : 'Enhanced CSS selectors'} due to API error: ${errorMessage}`,
+      rationale: `Fallback strategy: ${hasJsonLd ? 'Enhanced CSS selectors with JSON-LD' : 'Enhanced CSS selectors'} due to API error: ${errorMessage}`,
       actions: [{
         mode: "HTTP" as const,
-        parseStrategy: hasJsonLd ? "JSONLD" as const : "HYBRID" as const,
+        parseStrategy: "HYBRID" as const, // Always use HYBRID to try both JSON-LD and CSS selectors
         selectors: {
-          item: "article.product_pod, article, .product, .product-card, .product-item, [data-product], li.item, .book, .col-lg-3, .col-md-3, [itemtype*='Product']",
-          link: "h3 a, a[href*='catalogue'], a[href*='product'], a.product-link, a[href], [itemprop='url']",
-          title: "h3 a, h2, h3, .title, .product-title, .name, [alt], [itemprop='name']",
-          price: ".price_color, .price, [class*='price'], [class*='cost'], .money, .amount, [itemprop='price'], span:contains('$'), span:contains('€'), span:contains('£')",
-          image: ".image_container img, img.thumbnail, img, [itemprop='image']",
-          description: ".description, .product-description, [itemprop='description'], .details",
-          brand: ".brand, [itemprop='brand'], .manufacturer",
-          rating: ".rating, .stars, [itemprop='ratingValue'], .review-rating",
-          sku: ".sku, [itemprop='sku'], .product-code"
+          item: "article.product_pod, article, .product, .product-card, .product-item, [data-product], li.item, .book, .col-lg-3, .col-md-3, .col-sm-6, .grid-item, .product-listing-item, div[class*='product'], [itemtype*='Product']",
+          link: "h3 a, h4 a, a[href*='catalogue'], a[href*='product'], a.product-link, a[href], [itemprop='url'], .product-title a, .name a",
+          title: "h3 a, h4 a, h2, h3, h4, .title, .product-title, .name, .product-name, [alt], [itemprop='name'], .item-title",
+          price: ".price_color, .price, [class*='price'], [class*='cost'], .money, .amount, [itemprop='price'], span:contains('$'), span:contains('€'), span:contains('£'), .product-price, .sale-price, .current-price",
+          image: ".image_container img, img.thumbnail, img.product-image, img, [itemprop='image'], .product-img img",
+          description: ".description, .product-description, [itemprop='description'], .details, .product-details, .item-description",
+          brand: ".brand, [itemprop='brand'], .manufacturer, .product-brand, .brand-name",
+          rating: ".rating, .stars, [itemprop='ratingValue'], .review-rating, .product-rating",
+          sku: ".sku, [itemprop='sku'], .product-code, .item-code, .model"
         },
         pagination: {
           type: "LINK" as const,

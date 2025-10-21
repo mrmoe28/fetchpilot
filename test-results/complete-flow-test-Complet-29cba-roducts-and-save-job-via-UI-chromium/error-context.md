@@ -1,0 +1,50 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "FetchPilot Autonomous web intelligence" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - img [ref=e8]
+        - generic [ref=e10]:
+          - heading "FetchPilot" [level=1] [ref=e11]
+          - paragraph [ref=e12]: Autonomous web intelligence
+      - generic [ref=e13]:
+        - link "Docs" [ref=e14] [cursor=pointer]:
+          - /url: /docs
+          - img [ref=e15]
+          - generic [ref=e17]: Docs
+        - link "Sign In" [ref=e18] [cursor=pointer]:
+          - /url: /auth/signin
+  - main [ref=e19]:
+    - generic [ref=e23]:
+      - img [ref=e25]
+      - generic [ref=e27]:
+        - heading "Welcome Back" [level=1] [ref=e28]
+        - paragraph [ref=e29]: Sign in to access your scraping dashboard
+      - generic [ref=e30]:
+        - generic [ref=e31]:
+          - generic [ref=e32]: Email
+          - textbox "Email" [ref=e33]:
+            - /placeholder: your@email.com
+            - text: ekosolarize@gmail.com
+        - generic [ref=e34]:
+          - generic [ref=e35]: Password
+          - generic [ref=e36]:
+            - textbox "Password" [active] [ref=e37]:
+              - /placeholder: ••••••••
+              - text: Chano
+            - button [ref=e38] [cursor=pointer]:
+              - img [ref=e39]
+        - button "Sign In" [ref=e42] [cursor=pointer]
+      - button "Forgot your password?" [ref=e43] [cursor=pointer]
+      - generic [ref=e48]: OR
+      - button "Continue with Google" [ref=e49] [cursor=pointer]:
+        - img [ref=e50]
+        - text: Continue with Google
+      - paragraph [ref=e56]:
+        - text: Don't have an account?
+        - button "Sign up" [ref=e57] [cursor=pointer]
+      - paragraph [ref=e58]: By continuing, you agree to our Terms of Service and Privacy Policy
+```
