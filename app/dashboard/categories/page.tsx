@@ -167,6 +167,26 @@ function CategoriesContent() {
     }
   }
 
+  const handleDeleteProduct = async (productId: string, index: number) => {
+    try {
+      const res = await fetch(`/api/products/${productId}`, {
+        method: 'DELETE'
+      })
+      
+      if (!res.ok) throw new Error('Failed to delete product')
+      
+      // Remove from local state
+      setProducts(prev => prev.filter((_, i) => i !== index))
+      setUncategorizedProducts(prev => prev.filter(p => p.id !== productId))
+      
+      // Refresh category counts
+      await fetchCategories()
+    } catch (error) {
+      console.error('Error deleting product:', error)
+      alert('Failed to delete product')
+    }
+  }
+
   // Filter and sort categories
   const filteredCategories = categories
     .filter(cat => 
@@ -498,6 +518,8 @@ function CategoriesContent() {
                 selectedItems={selectedItems}
                 onSelectItem={handleSelectItem}
                 onSelectAll={handleSelectAll}
+                showDelete={true}
+                onDelete={handleDeleteProduct}
               />
             )}
           </CardContent>
@@ -553,6 +575,8 @@ function CategoriesContent() {
                 selectedItems={selectedItems}
                 onSelectItem={handleSelectItem}
                 onSelectAll={handleSelectAll}
+                showDelete={true}
+                onDelete={handleDeleteProduct}
               />
             )}
           </CardContent>

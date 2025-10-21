@@ -1,19 +1,24 @@
 import { Table, THead, TRow, TH, TD } from "@/components/ui/table"
 import Image from "next/image"
-import { ExternalLink, CheckCircle, XCircle } from "lucide-react"
+import { ExternalLink, CheckCircle, XCircle, Trash2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface ResultsTableProps {
   rows: any[];
   selectedItems?: string[];
   onSelectItem?: (index: string) => void;
   onSelectAll?: (selected: boolean) => void;
+  onDelete?: (productId: string, index: number) => void;
+  showDelete?: boolean;
 }
 
 export default function ResultsTable({ 
   rows, 
   selectedItems = [], 
   onSelectItem, 
-  onSelectAll 
+  onSelectAll,
+  onDelete,
+  showDelete = false
 }: ResultsTableProps) {
   const allSelected = rows.length > 0 && selectedItems.length === rows.length;
   const someSelected = selectedItems.length > 0 && selectedItems.length < rows.length;
@@ -55,6 +60,7 @@ export default function ResultsTable({
               <TH className="font-semibold">Category</TH>
               <TH className="font-semibold">Stock</TH>
               <TH className="font-semibold">URL</TH>
+              {showDelete && <TH className="font-semibold">Actions</TH>}
             </TRow>
           </THead>
           <tbody>
@@ -166,6 +172,23 @@ export default function ResultsTable({
                     View
                   </a>
                 </TD>
+                {showDelete && onDelete && (
+                  <TD>
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (confirm('Are you sure you want to delete this product?')) {
+                          onDelete(r.id, i)
+                        }
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </TD>
+                )}
               </TRow>
             ))}
           </tbody>
