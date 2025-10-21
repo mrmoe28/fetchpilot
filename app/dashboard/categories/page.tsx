@@ -14,7 +14,8 @@ import {
   SortAsc,
   SortDesc,
   Grid3X3,
-  List
+  List,
+  Copy
 } from 'lucide-react'
 import Input from '@/components/ui/input'
 
@@ -68,11 +69,14 @@ function CategoriesContent() {
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [selectedCategoryForBatch, setSelectedCategoryForBatch] = useState('')
   const [batchCategorizing, setBatchCategorizing] = useState(false)
+  const [duplicatesCount, setDuplicatesCount] = useState(0)
+  const [removingDuplicates, setRemovingDuplicates] = useState(false)
 
   // Fetch categories and uncategorized products
   useEffect(() => {
     fetchCategories()
     fetchUncategorizedProducts()
+    checkDuplicates()
   }, [])
 
   // Fetch products when category is selected or showing uncategorized
@@ -184,6 +188,48 @@ function CategoriesContent() {
     } catch (error) {
       console.error('Error deleting product:', error)
       alert('Failed to delete product')
+    }
+  }
+
+  const checkDuplicates = async () => {
+    try {
+      const res = await fetch('/api/products/duplicates')
+      if (!res.ok) return
+      
+      const data = await res.json()
+      setDuplicatesCount(data.totalDuplicateProducts || 0)
+    } catch (error) {
+      console.error('Error checking duplicates:', error)
+    }
+  }
+
+  const handleRemoveDuplicates = async () => {
+    if (!confirm(`This will remove ${duplicatesCount} duplicate products, keeping only the newest version of each. Continue?`)) {
+      return
+    }
+
+    try {
+      setRemovingDuplicates(true)
+      const res = await fetch('/api/products/duplicates', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ strategy: 'keep-newest' })
+      })
+      
+      if (!res.ok) throw new Error('Failed to remove duplicates')
+      
+      const data = await res.json()
+      alert(`Successfully removed ${data.deletedCount} duplicate products!`)
+      
+      // Refresh data
+      await checkDuplicates()
+      await fetchCategories()
+      await fetchUncategorizedProducts()
+    } catch (error) {
+      console.error('Error removing duplicates:', error)
+      alert('Failed to remove duplicates')
+    } finally {
+      setRemovingDuplicates(false)
     }
   }
 
@@ -431,6 +477,34 @@ function CategoriesContent() {
                     className="bg-amber-600 hover:bg-amber-700 text-white flex-shrink-0"
                   >
                     View & Categorize
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Duplicate Products Alert */}
+          {duplicatesCount > 0 && (
+            <Card className="glass shadow-soft border border-red-200/60 rounded-2xl bg-red-50/30">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Copy className="w-5 h-5 text-red-600" />
+                      <h3 className="font-semibold text-red-900">
+                        {duplicatesCount} Duplicate {duplicatesCount === 1 ? 'Product' : 'Products'} Found
+                      </h3>
+                    </div>
+                    <p className="text-sm text-red-700">
+                      You have duplicate products with the same URL. Click below to automatically remove duplicates (keeping the newest version).
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleRemoveDuplicates}
+                    disabled={removingDuplicates}
+                    className="bg-red-600 hover:bg-red-700 text-white flex-shrink-0"
+                  >
+                    {removingDuplicates ? 'Removing...' : 'Remove Duplicates'}
                   </Button>
                 </div>
               </CardContent>
