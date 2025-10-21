@@ -59,7 +59,7 @@ export async function orchestrateSmartSearch(
     }
     
     browser = await chromium.connect({
-      wsEndpoint: `wss://chrome.browserless.io?token=${process.env.BROWSERLESS_TOKEN}`
+      wsEndpoint: `wss://production-sfo.browserless.io?token=${process.env.BROWSERLESS_TOKEN}`
     })
   } else {
     // Use local chromium for development

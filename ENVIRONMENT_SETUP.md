@@ -24,6 +24,7 @@ OLLAMA_MODEL="llama3.3"
 DATABASE_URL="postgresql://username:password@localhost:5432/fetchpilot"
 
 # Browserless.io Configuration (For Vercel Production Smart Search)
+# Note: Uses new production endpoint wss://production-sfo.browserless.io
 BROWSERLESS_TOKEN="your-browserless-io-token-here"
 
 # Optional Browser Worker (For JavaScript-heavy sites)
@@ -63,6 +64,8 @@ For Vercel deployment, add these environment variables in your Vercel dashboard:
 3. Add `BROWSERLESS_TOKEN` to your environment variables
 4. Smart search will now work in production!
 
+**Note**: The app uses the new production endpoint `wss://production-sfo.browserless.io` (not the legacy `chrome.browserless.io` endpoint).
+
 ## Database Setup
 
 ### Option 1: Neon (Recommended)
@@ -99,6 +102,11 @@ npm run dev
 - Make sure you added the environment variable to Vercel
 - Check that it's set for the Production environment
 - Verify your Browserless.io token is correct
+
+### "WebSocket error: 403 Forbidden" Error
+- This means you're using the old Browserless.io endpoint
+- The app now uses `wss://production-sfo.browserless.io` (updated automatically)
+- Make sure you're using the latest version of the code
 
 ### Database Connection Errors
 - Verify your `DATABASE_URL` is correct
