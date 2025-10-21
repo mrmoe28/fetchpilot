@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const userCategories = await db
+    const userCategoriesRaw = await db
       .select({
         id: categories.id,
         name: categories.name,
@@ -46,15 +46,27 @@ export async function GET(req: NextRequest) {
         icon: categories.icon,
         createdAt: categories.createdAt,
         updatedAt: categories.updatedAt,
-        _count: {
-          scrapedProducts: count(scrapedProducts.id)
-        }
+        productCount: count(scrapedProducts.id)
       })
       .from(categories)
       .leftJoin(scrapedProducts, eq(categories.id, scrapedProducts.categoryId))
       .where(eq(categories.userId, session.user.id))
       .groupBy(categories.id)
       .orderBy(desc(categories.updatedAt))
+
+    // Transform to match expected format
+    const userCategories = userCategoriesRaw.map(cat => ({
+      id: cat.id,
+      name: cat.name,
+      description: cat.description,
+      color: cat.color,
+      icon: cat.icon,
+      createdAt: cat.createdAt,
+      updatedAt: cat.updatedAt,
+      _count: {
+        scrapedProducts: cat.productCount
+      }
+    }))
 
     resultCount = userCategories.length
     const durationMs = Math.round(performance.now() - startTime)

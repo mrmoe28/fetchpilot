@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import Badge from '@/components/ui/badge'
@@ -49,7 +49,7 @@ interface Product {
   }
 }
 
-export default function CategoriesPage() {
+function CategoriesContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const selectedCategoryId = searchParams.get('categoryId')
@@ -389,5 +389,22 @@ export default function CategoriesPage() {
         </Card>
       )}
     </div>
+  )
+}
+
+export default function CategoriesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen grid place-content-center">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-2xl bg-sky-500/20 grid place-content-center animate-pulse mx-auto mb-4">
+            <FolderOpen className="w-8 h-8 text-sky-600" />
+          </div>
+          <p className="text-slate-600">Loading categories...</p>
+        </div>
+      </div>
+    }>
+      <CategoriesContent />
+    </Suspense>
   )
 }
