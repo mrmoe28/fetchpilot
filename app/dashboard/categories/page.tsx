@@ -15,9 +15,13 @@ import {
   SortDesc,
   Grid3X3,
   List,
-  Copy
+  Copy,
+  Plus,
+  X
 } from 'lucide-react'
 import Input from '@/components/ui/input'
+import Label from '@/components/ui/label'
+import Textarea from '@/components/ui/textarea'
 
 interface Category {
   id: string
@@ -71,6 +75,13 @@ function CategoriesContent() {
   const [batchCategorizing, setBatchCategorizing] = useState(false)
   const [duplicatesCount, setDuplicatesCount] = useState(0)
   const [removingDuplicates, setRemovingDuplicates] = useState(false)
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [createFormData, setCreateFormData] = useState({
+    name: '',
+    description: '',
+    color: '#3b82f6'
+  })
+  const [creatingCategory, setCreatingCategory] = useState(false)
 
   // Fetch categories and uncategorized products
   useEffect(() => {
@@ -284,6 +295,38 @@ function CategoriesContent() {
     }
   }
 
+  const handleCreateCategory = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!createFormData.name.trim()) {
+      alert('Category name is required')
+      return
+    }
+
+    try {
+      setCreatingCategory(true)
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(createFormData)
+      })
+      
+      if (!res.ok) throw new Error('Failed to create category')
+      
+      // Reset form and close modal
+      setCreateFormData({ name: '', description: '', color: '#3b82f6' })
+      setShowCreateForm(false)
+      
+      // Refresh categories
+      await fetchCategories()
+    } catch (error) {
+      console.error('Error creating category:', error)
+      alert('Failed to create category')
+    } finally {
+      setCreatingCategory(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen grid place-content-center">
@@ -311,7 +354,7 @@ function CategoriesContent() {
           </p>
         </div>
         
-        {selectedCategory && (
+        {selectedCategory ? (
           <Button
             onClick={() => router.push('/dashboard/categories')}
             variant="outline"
@@ -319,6 +362,14 @@ function CategoriesContent() {
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Categories
+          </Button>
+        ) : (
+          <Button
+            onClick={() => setShowCreateForm(true)}
+            className="bg-sky-600 hover:bg-sky-700 text-white w-fit"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Create New
           </Button>
         )}
       </div>
@@ -655,6 +706,102 @@ function CategoriesContent() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Create Category Modal */}
+      {showCreateForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-lg">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-slate-900">Create New Category</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowCreateForm(false)
+                    setCreateFormData({ name: '', description: '', color: '#3b82f6' })
+                  }}
+                  className="rounded-full w-8 h-8 p-0"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <form onSubmit={handleCreateCategory} className="space-y-4">
+                <div>
+                  <Label htmlFor="category-name" className="text-sm font-medium text-slate-700">
+                    Category Name *
+                  </Label>
+                  <Input
+                    id="category-name"
+                    placeholder="e.g., Electronics, Clothing, Books"
+                    value={createFormData.name}
+                    onChange={(e) => setCreateFormData(prev => ({ ...prev, name: e.target.value }))}
+                    className="mt-1"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="category-description" className="text-sm font-medium text-slate-700">
+                    Description
+                  </Label>
+                  <Textarea
+                    id="category-description"
+                    placeholder="Brief description of this category..."
+                    value={createFormData.description}
+                    onChange={(e) => setCreateFormData(prev => ({ ...prev, description: e.target.value }))}
+                    className="mt-1"
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="category-color" className="text-sm font-medium text-slate-700">
+                    Color
+                  </Label>
+                  <div className="flex items-center gap-3 mt-1">
+                    <input
+                      type="color"
+                      id="category-color"
+                      value={createFormData.color}
+                      onChange={(e) => setCreateFormData(prev => ({ ...prev, color: e.target.value }))}
+                      className="w-12 h-12 rounded-lg border border-slate-300 cursor-pointer"
+                    />
+                    <Input
+                      value={createFormData.color}
+                      onChange={(e) => setCreateFormData(prev => ({ ...prev, color: e.target.value }))}
+                      placeholder="#3b82f6"
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowCreateForm(false)
+                      setCreateFormData({ name: '', description: '', color: '#3b82f6' })
+                    }}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={creatingCategory || !createFormData.name.trim()}
+                    className="flex-1 bg-sky-600 hover:bg-sky-700 text-white"
+                  >
+                    {creatingCategory ? 'Creating...' : 'Create Category'}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   )
