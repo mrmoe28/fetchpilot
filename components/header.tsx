@@ -5,11 +5,12 @@ import { UserMenu } from "./user-menu";
 
 export default async function Header() {
   const session = await auth();
+  const logoHref = session?.user ? "/dashboard" : "/landing";
 
   return (
     <header className="sticky top-0 z-50 glass shadow-sm border-b border-white/40 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+        <Link href={logoHref} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-br from-sky-500 to-blue-600 rounded-2xl blur opacity-60 animate-pulse-slow"></div>
             <div className="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 text-white grid place-content-center shadow-md">

@@ -2,7 +2,7 @@ import { ReactNode } from 'react'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { LayoutDashboard, Calendar, User, Settings, Home, FolderOpen, Activity } from 'lucide-react'
+import { LayoutDashboard, Calendar, User, Settings, FolderOpen, Activity } from 'lucide-react'
 import { clsx } from 'clsx'
 
 interface DashboardLayoutProps {
@@ -30,14 +30,6 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
       {/* Sidebar Navigation */}
       <aside className="w-64 shrink-0">
         <div className="sticky top-24 space-y-2">
-          <Link
-            href="/"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-white/60 transition-all duration-200 mb-4"
-          >
-            <Home className="w-5 h-5" />
-            Back to Home
-          </Link>
-
           {navItems.map((item) => (
             <Link
               key={item.href}

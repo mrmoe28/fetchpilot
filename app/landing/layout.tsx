@@ -1,8 +1,5 @@
 import type { Metadata } from "next"
 import { ReactNode } from "react"
-import { ThemeProvider } from "@/components/theme-provider"
-import { ToastProvider } from "@/lib/providers/toast-provider"
-import { SessionProvider } from "@/components/session-provider"
 
 export const metadata: Metadata = {
   title: {
@@ -50,22 +47,6 @@ export const metadata: Metadata = {
 }
 
 export default function LandingLayout({ children }: { children: ReactNode }) {
-  return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="antialiased">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem
-          disableTransitionOnChange={false}
-        >
-          <SessionProvider>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
-          </SessionProvider>
-        </ThemeProvider>
-      </body>
-    </html>
-  )
+  // Landing layout - renders without Header since landing page has its own navbar
+  return <>{children}</>
 }

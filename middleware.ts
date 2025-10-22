@@ -13,13 +13,23 @@ export default auth((req) => {
     return NextResponse.next()
   }
 
-  // 2. Public pages that don't require authentication
+  // 2. Handle root path - redirect based on auth status
+  if (pathname === '/') {
+    if (isLoggedIn) {
+      return NextResponse.redirect(new URL('/dashboard', nextUrl.origin))
+    } else {
+      return NextResponse.redirect(new URL('/landing', nextUrl.origin))
+    }
+  }
+
+  // 3. Public pages that don't require authentication
   const publicPages = [
     '/auth/signin',
     '/auth/error', 
     '/privacy',
     '/terms',
-    '/landing'
+    '/landing',
+    '/docs'
   ]
 
   if (publicPages.includes(pathname)) {
@@ -30,14 +40,14 @@ export default auth((req) => {
     return NextResponse.next()
   }
 
-  // 3. Protected pages require authentication
+  // 4. Protected pages require authentication
   if (!isLoggedIn) {
     const callbackUrl = encodeURIComponent(pathname + nextUrl.search)
     const signInUrl = new URL(`/auth/signin?callbackUrl=${callbackUrl}`, nextUrl.origin)
     return NextResponse.redirect(signInUrl)
   }
 
-  // 4. User is authenticated, allow access
+  // 5. User is authenticated, allow access
   return NextResponse.next()
 })
 
